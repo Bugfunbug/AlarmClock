@@ -39,19 +39,22 @@
 
         .container {
             width: 100%;
-            max-width: 520px;
+            max-width: 540px;
             margin: 0 auto;
         }
 
         h1 {
             margin: 20px 0 8px;
+
             font-size: 32px;
             letter-spacing: -0.5px;
         }
 
         .subtitle {
             margin: 0 0 28px;
+
             color: #6e6e73;
+
             line-height: 1.5;
         }
 
@@ -61,6 +64,7 @@
 
         .section-title {
             margin-bottom: 10px;
+
             font-size: 17px;
             font-weight: 600;
         }
@@ -94,6 +98,7 @@
             margin-top: 6px;
 
             color: #6e6e73;
+
             font-size: 13px;
         }
 
@@ -114,6 +119,7 @@
             border-radius: 14px;
 
             background: white;
+
             cursor: pointer;
         }
 
@@ -132,6 +138,7 @@
 
             font-size: 16px;
             font-weight: 500;
+
             text-overflow: ellipsis;
             white-space: nowrap;
         }
@@ -140,6 +147,7 @@
             margin-top: 3px;
 
             color: #8e8e93;
+
             font-size: 12px;
 
             overflow: hidden;
@@ -150,6 +158,7 @@
         .preview-controls {
             display: flex;
             gap: 6px;
+
             flex-shrink: 0;
         }
 
@@ -164,6 +173,7 @@
             color: #1c1c1e;
 
             font-size: 16px;
+
             cursor: pointer;
         }
 
@@ -232,11 +242,13 @@
             background: #e5e5ea;
 
             color: #3a3a3c;
+
             line-height: 1.4;
         }
 
         #progress {
             display: none;
+
             margin-top: 16px;
         }
 
@@ -247,6 +259,7 @@
             overflow: hidden;
 
             border-radius: 999px;
+
             background: #d1d1d6;
         }
 
@@ -255,9 +268,10 @@
             height: 100%;
 
             border-radius: inherit;
+
             background: #007aff;
 
-            transition: width 0.25s linear;
+            transition: width 0.2s linear;
         }
 
         #progress-text {
@@ -269,18 +283,81 @@
             text-align: center;
         }
 
+        .diagnostics {
+            padding: 14px;
+
+            border: 1px solid #d1d1d6;
+            border-radius: 14px;
+
+            background: white;
+        }
+
+        .diagnostic {
+            display: flex;
+            justify-content: space-between;
+
+            padding: 7px 0;
+
+            border-bottom: 1px solid #e5e5ea;
+
+            font-size: 14px;
+        }
+
+        .diagnostic:last-child {
+            border-bottom: 0;
+        }
+
+        .diagnostic-value {
+            font-weight: 600;
+        }
+
+        .yes {
+            color: #34c759;
+        }
+
+        .no {
+            color: #ff3b30;
+        }
+
+        .unknown {
+            color: #ff9500;
+        }
+
+        #generate {
+            width: 100%;
+            margin-top: 12px;
+            padding: 13px;
+
+            border: 0;
+            border-radius: 13px;
+
+            background: #e5e5ea;
+            color: inherit;
+
+            font-size: 16px;
+            font-weight: 600;
+
+            cursor: pointer;
+        }
+
+        #generate:disabled {
+            opacity: 0.4;
+        }
+
         #player {
             display: none;
         }
 
         @media (prefers-color-scheme: dark) {
+
             body {
                 background: #000;
                 color: #f2f2f7;
             }
 
             .duration-field input,
-            .sound {
+            .sound,
+            .diagnostics {
                 border-color: #38383a;
                 background: #1c1c1e;
                 color: #f2f2f7;
@@ -294,6 +371,14 @@
             #status {
                 background: #1c1c1e;
                 color: #d1d1d6;
+            }
+
+            .diagnostic {
+                border-color: #38383a;
+            }
+
+            #generate {
+                background: #38383a;
             }
 
             #progress-bar {
@@ -313,6 +398,11 @@
         Play an alarm privately through your connected headphones.
     </p>
 
+
+    <!-- ==================================================
+         DURATION
+         ================================================== -->
+
     <section class="section">
 
         <div class="section-title">
@@ -322,6 +412,7 @@
         <div class="duration">
 
             <div class="duration-field">
+
                 <input
                     id="hours"
                     type="number"
@@ -330,10 +421,14 @@
                     value="0"
                     inputmode="numeric"
                 >
+
                 <span>Hours</span>
+
             </div>
 
+
             <div class="duration-field">
+
                 <input
                     id="minutes"
                     type="number"
@@ -342,10 +437,14 @@
                     value="5"
                     inputmode="numeric"
                 >
+
                 <span>Minutes</span>
+
             </div>
 
+
             <div class="duration-field">
+
                 <input
                     id="seconds"
                     type="number"
@@ -354,12 +453,19 @@
                     value="0"
                     inputmode="numeric"
                 >
+
                 <span>Seconds</span>
+
             </div>
 
         </div>
 
     </section>
+
+
+    <!-- ==================================================
+         SOUNDS
+         ================================================== -->
 
     <section class="section">
 
@@ -367,9 +473,17 @@
             Alarm sound
         </div>
 
-        <div id="sound-list" class="sound-list"></div>
+        <div
+            id="sound-list"
+            class="sound-list"
+        ></div>
 
     </section>
+
+
+    <!-- ==================================================
+         ALARM CONTROLS
+         ================================================== -->
 
     <section class="section">
 
@@ -381,6 +495,7 @@
             >
                 Start Alarm
             </button>
+
 
             <button
                 id="stop"
@@ -394,14 +509,22 @@
 
     </section>
 
+
+    <!-- ==================================================
+         STATUS
+         ================================================== -->
+
     <div id="status">
         Ready.
     </div>
 
+
     <div id="progress">
 
         <div id="progress-bar">
+
             <div id="progress-fill"></div>
+
         </div>
 
         <div id="progress-text">
@@ -410,11 +533,108 @@
 
     </div>
 
+
+    <!-- ==================================================
+         AUDIO CAPABILITY TEST
+         ================================================== -->
+
+    <section class="section">
+
+        <div class="section-title">
+            Audio system
+        </div>
+
+
+        <div class="diagnostics">
+
+            <div class="diagnostic">
+                <span>AudioEncoder</span>
+                <span
+                    id="test-audio-encoder"
+                    class="diagnostic-value"
+                >
+                    Testing...
+                </span>
+            </div>
+
+
+            <div class="diagnostic">
+                <span>AudioDecoder</span>
+                <span
+                    id="test-audio-decoder"
+                    class="diagnostic-value"
+                >
+                    Testing...
+                </span>
+            </div>
+
+
+            <div class="diagnostic">
+                <span>MediaRecorder</span>
+                <span
+                    id="test-media-recorder"
+                    class="diagnostic-value"
+                >
+                    Testing...
+                </span>
+            </div>
+
+
+            <div class="diagnostic">
+                <span>MediaSource</span>
+                <span
+                    id="test-media-source"
+                    class="diagnostic-value"
+                >
+                    Testing...
+                </span>
+            </div>
+
+
+            <div class="diagnostic">
+                <span>AAC recording</span>
+                <span
+                    id="test-aac"
+                    class="diagnostic-value"
+                >
+                    Testing...
+                </span>
+            </div>
+
+
+            <div class="diagnostic">
+                <span>MP4 recording</span>
+                <span
+                    id="test-mp4"
+                    class="diagnostic-value"
+                >
+                    Testing...
+                </span>
+            </div>
+
+
+            <button
+                id="generate"
+                disabled
+            >
+                Test Compact Generator
+            </button>
+
+        </div>
+
+    </section>
+
+
     <audio id="player"></audio>
 
 </main>
 
+
 <script>
+
+/* ========================================================
+   SOUND FILES
+   ======================================================== */
 
 const soundFiles = [
     "alarm.mp3",
@@ -429,6 +649,10 @@ const soundFiles = [
     "timer_alarm.mp3",
 ];
 
+
+/* ========================================================
+   DOM
+   ======================================================== */
 
 const hoursInput =
     document.getElementById("hours");
@@ -463,6 +687,13 @@ const progressFill =
 const progressText =
     document.getElementById("progress-text");
 
+const generateButton =
+    document.getElementById("generate");
+
+
+/* ========================================================
+   STATE
+   ======================================================== */
 
 let selectedSound = null;
 
@@ -470,12 +701,22 @@ let previewAudio = null;
 
 let alarmRunning = false;
 
-let progressTimer = null;
+let generatedURL = null;
+
+let generationAudioContext = null;
+
+let generationSource = null;
+
+let generationRecorder = null;
+
+let generationChunks = [];
+
+let generationStopRequested = false;
 
 
-/* -------------------------------------------------------
- * Utility
- * ----------------------------------------------------- */
+/* ========================================================
+   BASIC UTILITIES
+   ======================================================== */
 
 function displayName(filename) {
 
@@ -485,11 +726,13 @@ function displayName(filename) {
             ""
         );
 
+
     name =
         name.replace(
             /[_-]+/g,
             " "
         );
+
 
     name =
         name.replace(
@@ -497,6 +740,7 @@ function displayName(filename) {
             letter =>
                 letter.toUpperCase()
         );
+
 
     return name;
 }
@@ -519,17 +763,20 @@ function getDurationSeconds() {
             Number(hoursInput.value) || 0
         );
 
+
     const minutes =
         Math.max(
             0,
             Number(minutesInput.value) || 0
         );
 
+
     const seconds =
         Math.max(
             0,
             Number(secondsInput.value) || 0
         );
+
 
     return (
         hours * 3600 +
@@ -547,18 +794,22 @@ function formatDuration(totalSeconds) {
             Math.floor(totalSeconds)
         );
 
+
     const hours =
         Math.floor(
             totalSeconds / 3600
         );
+
 
     const minutes =
         Math.floor(
             (totalSeconds % 3600) / 60
         );
 
+
     const seconds =
         totalSeconds % 60;
+
 
     return [
         hours.toString().padStart(2, "0"),
@@ -568,28 +819,39 @@ function formatDuration(totalSeconds) {
 }
 
 
-/* -------------------------------------------------------
- * Preview sounds
- * ----------------------------------------------------- */
+/* ========================================================
+   PREVIEW CONTROLS
+   ======================================================== */
 
+/*
+ * Completely stop the current preview.
+ */
 function stopPreview() {
 
     if (!previewAudio) {
         return;
     }
 
+
     previewAudio.pause();
 
     previewAudio.currentTime = 0;
 
+
     if (previewAudio.playButton) {
-        previewAudio.playButton.textContent = "▶";
+
+        previewAudio.playButton.textContent =
+            "▶";
     }
+
 
     previewAudio = null;
 }
 
 
+/*
+ * Create a sound row.
+ */
 function createSoundElement(filename) {
 
     const container =
@@ -645,15 +907,11 @@ function createSoundElement(filename) {
     playButton.className =
         "preview";
 
-    playButton.type = "button";
+    playButton.type =
+        "button";
 
     playButton.textContent =
         "▶";
-
-    playButton.setAttribute(
-        "aria-label",
-        `Play ${displayName(filename)}`
-    );
 
 
     const stopButton =
@@ -662,29 +920,28 @@ function createSoundElement(filename) {
     stopButton.className =
         "preview";
 
-    stopButton.type = "button";
+    stopButton.type =
+        "button";
 
     stopButton.textContent =
         "■";
-
-    stopButton.setAttribute(
-        "aria-label",
-        `Stop ${displayName(filename)}`
-    );
 
 
     /*
      * PLAY
      *
-     * Always starts this preview from
-     * the beginning.
+     * Always starts from zero.
      */
     playButton.addEventListener(
         "click",
-        event => {
+        async event => {
 
             event.stopPropagation();
 
+
+            /*
+             * Stop anything else first.
+             */
             stopPreview();
 
 
@@ -697,52 +954,89 @@ function createSoundElement(filename) {
             audio.playButton =
                 playButton;
 
+
             previewAudio =
                 audio;
+
+
+            playButton.textContent =
+                "▶";
+
+
+            try {
+
+                await audio.play();
+
+                /*
+                 * Keep the button as a Play
+                 * button, because pressing it
+                 * again restarts the sound.
+                 */
+
+            } catch (error) {
+
+                console.error(error);
+
+                stopPreview();
+
+                return;
+            }
+
+
+            /*
+             * If Play is clicked again,
+             * restart the sound.
+             */
+            playButton.onclick = async event => {
+
+                event.stopPropagation();
+
+                stopPreview();
+
+                const restarted =
+                    new Audio(
+                        soundURL(filename)
+                    );
+
+                restarted.playButton =
+                    playButton;
+
+                previewAudio =
+                    restarted;
+
+                try {
+
+                    await restarted.play();
+
+                } catch (error) {
+
+                    console.error(error);
+
+                    stopPreview();
+                }
+            };
 
 
             audio.addEventListener(
                 "ended",
                 () => {
 
-                    playButton.textContent =
-                        "▶";
-
                     if (
                         previewAudio === audio
                     ) {
                         previewAudio = null;
                     }
+
+                    playButton.textContent =
+                        "▶";
                 }
             );
-
-
-            playButton.textContent =
-                "❚❚";
-
-
-            audio.play()
-                .catch(error => {
-
-                    console.error(error);
-
-                    playButton.textContent =
-                        "▶";
-
-                    if (
-                        previewAudio === audio
-                    ) {
-                        previewAudio = null;
-                    }
-                });
         }
     );
 
 
     /*
      * STOP
-     *
-     * Completely resets the preview.
      */
     stopButton.addEventListener(
         "click",
@@ -750,11 +1044,23 @@ function createSoundElement(filename) {
 
             event.stopPropagation();
 
+
             if (
                 previewAudio &&
                 previewAudio.playButton === playButton
             ) {
+
                 stopPreview();
+
+            } else {
+
+                /*
+                 * If this sound isn't currently
+                 * playing, the button still means
+                 * "reset this preview".
+                 */
+                playButton.textContent =
+                    "▶";
             }
         }
     );
@@ -770,7 +1076,7 @@ function createSoundElement(filename) {
 
 
     /*
-     * Selecting the sound.
+     * Select sound.
      */
     container.addEventListener(
         "click",
@@ -809,6 +1115,7 @@ function loadSounds() {
 
     soundList.innerHTML = "";
 
+
     soundFiles.forEach(
         (filename, index) => {
 
@@ -816,6 +1123,7 @@ function loadSounds() {
                 createSoundElement(
                     filename
                 );
+
 
             soundList.appendChild(
                 element
@@ -836,151 +1144,674 @@ function loadSounds() {
 }
 
 
-/* -------------------------------------------------------
- * Alarm controls
- * ----------------------------------------------------- */
+/* ========================================================
+   AUDIO CAPABILITY TESTING
+   ======================================================== */
 
-function resetAlarmUI() {
+function setDiagnostic(
+    id,
+    supported,
+    customText = null
+) {
 
-    alarmRunning = false;
+    const element =
+        document.getElementById(id);
 
-    startButton.disabled =
-        false;
 
-    stopButton.disabled =
-        true;
-
-    progress.style.display =
-        "none";
-
-    progressFill.style.width =
-        "0%";
-
-    clearInterval(
-        progressTimer
+    element.classList.remove(
+        "yes",
+        "no",
+        "unknown"
     );
-}
 
 
-function stopAlarm() {
+    if (supported === true) {
 
-    if (!alarmRunning) {
-        return;
+        element.textContent =
+            customText || "✓ Yes";
+
+        element.classList.add(
+            "yes"
+        );
+
+    } else if (supported === false) {
+
+        element.textContent =
+            customText || "✗ No";
+
+        element.classList.add(
+            "no"
+        );
+
+    } else {
+
+        element.textContent =
+            customText || "? Unknown";
+
+        element.classList.add(
+            "unknown"
+        );
     }
-
-
-    player.pause();
-
-    player.removeAttribute("src");
-
-    player.load();
-
-
-    alarmRunning = false;
-
-
-    resetAlarmUI();
-
-
-    status.textContent =
-        "Alarm stopped.";
 }
 
 
-stopButton.addEventListener(
-    "click",
-    stopAlarm
-);
+function testAudioCapabilities() {
+
+    /*
+     * WebCodecs.
+     *
+     * Safari 26 introduced these.
+     */
+    setDiagnostic(
+        "test-audio-encoder",
+        typeof AudioEncoder !==
+            "undefined"
+    );
 
 
-/* -------------------------------------------------------
- * Experimental efficient generator
- *
- * We deliberately test the modern APIs rather
- * than allocating an hour-long PCM WAV.
- * ----------------------------------------------------- */
-
-async function testModernAudioAPIs() {
-
-    const results = [];
+    setDiagnostic(
+        "test-audio-decoder",
+        typeof AudioDecoder !==
+            "undefined"
+    );
 
 
     /*
-     * Safari 26:
-     * WebCodecs AudioEncoder.
+     * MediaRecorder.
      */
-    if (
-        typeof AudioEncoder !==
-        "undefined"
-    ) {
-        results.push(
-            "AudioEncoder available"
-        );
-    } else {
-        results.push(
-            "AudioEncoder unavailable"
-        );
-    }
+    const hasRecorder =
+        typeof MediaRecorder !==
+        "undefined";
+
+
+    setDiagnostic(
+        "test-media-recorder",
+        hasRecorder
+    );
 
 
     /*
      * MediaSource.
+     *
+     * We report it but DO NOT rely on it
+     * for the iPhone implementation.
      */
-    if (
+    const hasMediaSource =
         typeof MediaSource !==
-        "undefined"
-    ) {
-        results.push(
-            "MediaSource available"
-        );
-    } else {
-        results.push(
-            "MediaSource unavailable"
-        );
-    }
+        "undefined";
+
+
+    setDiagnostic(
+        "test-media-source",
+        hasMediaSource
+    );
 
 
     /*
-     * AAC support.
+     * MIME support.
      */
-    if (
-        typeof MediaRecorder !==
-        "undefined"
-    ) {
+    let aacSupported = false;
+    let mp4Supported = false;
 
-        const aac =
-            MediaRecorder.isTypeSupported(
-                "audio/mp4;codecs=mp4a.40.2"
+
+    if (hasRecorder) {
+
+        const candidates = [
+
+            "audio/mp4;codecs=mp4a.40.2",
+
+            "audio/mp4;codecs=mp4a",
+
+            "audio/mp4",
+
+        ];
+
+
+        aacSupported =
+            candidates.some(
+                type =>
+                    MediaRecorder
+                        .isTypeSupported(type)
             );
 
-        results.push(
-            aac
-                ? "AAC MediaRecorder available"
-                : "AAC MediaRecorder unavailable"
-        );
+
+        mp4Supported =
+            MediaRecorder
+                .isTypeSupported(
+                    "audio/mp4"
+                );
     }
 
 
-    console.log(
-        "Modern audio capabilities:",
-        results
+    setDiagnostic(
+        "test-aac",
+        aacSupported
     );
 
-    return results;
+
+    setDiagnostic(
+        "test-mp4",
+        mp4Supported
+    );
+
+
+    /*
+     * Enable the experimental generator
+     * if MediaRecorder is available.
+     */
+    generateButton.disabled =
+        !hasRecorder;
+}
+
+
+/* ========================================================
+   COMPACT GENERATOR
+   ======================================================== */
+
+/*
+ * Find the best recording MIME type.
+ */
+function getRecordingMimeType() {
+
+    if (
+        typeof MediaRecorder ===
+        "undefined"
+    ) {
+        return null;
+    }
+
+
+    const candidates = [
+
+        "audio/mp4;codecs=mp4a.40.2",
+
+        "audio/mp4;codecs=mp4a",
+
+        "audio/mp4",
+
+        "audio/webm;codecs=opus",
+
+        "audio/webm"
+
+    ];
+
+
+    for (const type of candidates) {
+
+        if (
+            MediaRecorder.isTypeSupported(
+                type
+            )
+        ) {
+            return type;
+        }
+    }
+
+
+    return null;
 }
 
 
 /*
- * Start alarm.
+ * Generate the alarm as compressed media
+ * using a Web Audio MediaStream.
  *
- * At this stage we perform the capability test
- * and then use the existing known-good audio
- * mechanism for short tests.
+ * IMPORTANT:
  *
- * The actual compressed offline muxer will be
- * plugged in once we know exactly which APIs
- * your iPhone exposes.
+ * This is deliberately a REAL-TIME test.
+ * A 60-minute alarm takes approximately
+ * 60 minutes to generate.
+ *
+ * Its advantage is that we don't allocate
+ * a gigantic one-hour PCM buffer.
  */
+async function generateCompactAlarm() {
+
+    const duration =
+        getDurationSeconds();
+
+
+    if (duration <= 0) {
+
+        throw new Error(
+            "Duration must be greater than zero."
+        );
+    }
+
+
+    if (!selectedSound) {
+
+        throw new Error(
+            "No alarm sound selected."
+        );
+    }
+
+
+    const mimeType =
+        getRecordingMimeType();
+
+
+    if (!mimeType) {
+
+        throw new Error(
+            "This browser does not expose a supported compressed audio recorder."
+        );
+    }
+
+
+    generationStopRequested =
+        false;
+
+
+    /*
+     * Fetch alarm sound.
+     */
+    status.textContent =
+        "Loading alarm sound...";
+
+
+    const response =
+        await fetch(
+            soundURL(selectedSound)
+        );
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Unable to load alarm sound."
+        );
+    }
+
+
+    const soundData =
+        await response.arrayBuffer();
+
+
+    /*
+     * Decode the alarm.
+     */
+    generationAudioContext =
+        new AudioContext();
+
+
+    const alarmBuffer =
+        await generationAudioContext
+            .decodeAudioData(
+                soundData
+            );
+
+
+    /*
+     * Create an offline-ish playback graph
+     * inside a live AudioContext.
+     */
+    const destination =
+        generationAudioContext
+            .createMediaStreamDestination();
+
+
+    /*
+     * The recorder captures this stream.
+     */
+    generationRecorder =
+        new MediaRecorder(
+            destination.stream,
+            {
+                mimeType
+            }
+        );
+
+
+    generationChunks = [];
+
+
+    generationRecorder.ondataavailable =
+        event => {
+
+            if (
+                event.data &&
+                event.data.size > 0
+            ) {
+
+                generationChunks.push(
+                    event.data
+                );
+            }
+        };
+
+
+    /*
+     * Start recording.
+     *
+     * Request chunks periodically so we don't
+     * have to hold the entire recording as
+     * uncompressed audio in memory.
+     */
+    generationRecorder.start(
+        1000
+    );
+
+
+    /*
+     * Silence is represented by the fact that
+     * no audio source is connected initially.
+     *
+     * Then we schedule the alarm sound at the
+     * requested time.
+     */
+    generationSource =
+        generationAudioContext
+            .createBufferSource();
+
+
+    generationSource.buffer =
+        alarmBuffer;
+
+
+    generationSource.connect(
+        destination
+    );
+
+
+    /*
+     * We need to start the source at the exact
+     * requested time relative to the AudioContext.
+     */
+    const now =
+        generationAudioContext
+            .currentTime;
+
+
+    generationSource.start(
+        now + duration
+    );
+
+
+    /*
+     * Give the recorder enough time for the
+     * alarm sound itself.
+     */
+    const finishDelay =
+        duration +
+        alarmBuffer.duration +
+        0.25;
+
+
+    status.textContent =
+        `Generating compact alarm... ` +
+        `0:00 / ${formatDuration(finishDelay)}`;
+
+
+    const startTime =
+        performance.now();
+
+
+    return new Promise(
+        (resolve, reject) => {
+
+            const timer =
+                setInterval(
+                    () => {
+
+                        if (
+                            generationStopRequested
+                        ) {
+
+                            clearInterval(
+                                timer
+                            );
+
+                            reject(
+                                new Error(
+                                    "Generation stopped."
+                                )
+                            );
+
+                            return;
+                        }
+
+
+                        const elapsed =
+                            (
+                                performance.now() -
+                                startTime
+                            ) / 1000;
+
+
+                        const percentage =
+                            Math.min(
+                                100,
+                                (
+                                    elapsed /
+                                    finishDelay
+                                ) * 100
+                            );
+
+
+                        progress.style.display =
+                            "block";
+
+
+                        progressFill.style.width =
+                            `${percentage}%`;
+
+
+                        progressText.textContent =
+                            `${formatDuration(elapsed)} / ` +
+                            `${formatDuration(finishDelay)}`;
+
+
+                        status.textContent =
+                            `Generating compact alarm... ` +
+                            `${formatDuration(elapsed)} / ` +
+                            `${formatDuration(finishDelay)}`;
+
+
+                        if (
+                            elapsed >= finishDelay
+                        ) {
+
+                            clearInterval(
+                                timer
+                            );
+
+
+                            generationRecorder.stop();
+
+
+                            generationRecorder.onstop =
+                                async () => {
+
+                                    try {
+
+                                        const blob =
+                                            new Blob(
+                                                generationChunks,
+                                                {
+                                                    type:
+                                                        mimeType
+                                                }
+                                            );
+
+
+                                        resolve(blob);
+
+                                    } catch (error) {
+
+                                        reject(error);
+                                    }
+                                };
+                        }
+
+                    },
+                    250
+                );
+        }
+    );
+}
+
+
+/* ========================================================
+   GENERATOR BUTTON
+   ======================================================== */
+
+generateButton.addEventListener(
+    "click",
+    async () => {
+
+        if (alarmRunning) {
+            return;
+        }
+
+
+        try {
+
+            generateButton.disabled =
+                true;
+
+            startButton.disabled =
+                true;
+
+
+            status.textContent =
+                "Preparing compact audio generator...";
+
+
+            const blob =
+                await generateCompactAlarm();
+
+
+            /*
+             * Delete previous generated file.
+             */
+            if (generatedURL) {
+
+                URL.revokeObjectURL(
+                    generatedURL
+                );
+            }
+
+
+            generatedURL =
+                URL.createObjectURL(
+                    blob
+                );
+
+
+            /*
+             * Show useful information.
+             */
+            const sizeMB =
+                blob.size /
+                (1024 * 1024);
+
+
+            status.textContent =
+                `Generated successfully: ` +
+                `${sizeMB.toFixed(2)} MB ` +
+                `${blob.type}`;
+
+
+            /*
+             * Make it playable.
+             */
+            player.src =
+                generatedURL;
+
+
+            player.load();
+
+
+            progress.style.display =
+                "block";
+
+
+        } catch (error) {
+
+            console.error(error);
+
+
+            status.textContent =
+                "Generator failed: " +
+                error.message;
+
+        } finally {
+
+            generateButton.disabled =
+                false;
+
+            startButton.disabled =
+                false;
+        }
+    }
+);
+
+
+/* ========================================================
+   GENERATOR STOP
+   ======================================================== */
+
+function stopGeneration() {
+
+    generationStopRequested =
+        true;
+
+
+    if (generationSource) {
+
+        try {
+
+            generationSource.stop();
+
+        } catch (_) {
+            // Already stopped.
+        }
+
+        generationSource.disconnect();
+
+        generationSource =
+            null;
+    }
+
+
+    if (generationRecorder) {
+
+        try {
+
+            if (
+                generationRecorder.state !==
+                "inactive"
+            ) {
+
+                generationRecorder.stop();
+            }
+
+        } catch (_) {
+            // Already stopped.
+        }
+
+        generationRecorder =
+            null;
+    }
+
+
+    if (generationAudioContext) {
+
+        generationAudioContext
+            .close()
+            .catch(() => {});
+
+        generationAudioContext =
+            null;
+    }
+}
+
+
+/* ========================================================
+   ALARM BUTTONS
+   ======================================================== */
+
 startButton.addEventListener(
     "click",
     async () => {
@@ -1012,133 +1843,112 @@ startButton.addEventListener(
         }
 
 
-        stopPreview();
+        /*
+         * If a generated alarm exists, play it.
+         */
+        if (generatedURL) {
+
+            stopPreview();
 
 
-        alarmRunning = true;
-
-        startButton.disabled =
-            true;
-
-        stopButton.disabled =
-            false;
+            alarmRunning =
+                true;
 
 
-        status.textContent =
-            "Checking audio capabilities...";
+            startButton.disabled =
+                true;
+
+            stopButton.disabled =
+                false;
 
 
-        try {
-
-            const capabilities =
-                await testModernAudioAPIs();
+            player.currentTime =
+                0;
 
 
-            console.log(
-                capabilities
-            );
+            try {
+
+                await player.play();
+
+                status.textContent =
+                    "Alarm running.";
+
+            } catch (error) {
+
+                console.error(error);
+
+                alarmRunning =
+                    false;
+
+                startButton.disabled =
+                    false;
+
+                stopButton.disabled =
+                    true;
 
 
-            /*
-             * For now, this verifies the selected
-             * sound can be loaded.
-             */
-            const response =
-                await fetch(
-                    soundURL(
-                        selectedSound
-                    )
-                );
-
-
-            if (!response.ok) {
-
-                throw new Error(
-                    `Could not load ${selectedSound}`
-                );
+                status.textContent =
+                    "Unable to start playback: " +
+                    error.message;
             }
 
 
-            const blob =
-                await response.blob();
-
-
-            /*
-             * We have not yet generated the final
-             * compact alarm file.
-             *
-             * Tell the user exactly what's happening
-             * rather than silently doing something
-             * different.
-             */
-            status.textContent =
-                "Modern audio APIs detected. " +
-                "The compact alarm generator is being tested " +
-                "with this sound: " +
-                displayName(selectedSound);
-
-
-            /*
-             * Temporary test:
-             *
-             * Play the sound itself so we can verify
-             * that the media element remains our
-             * playback mechanism.
-             */
-            const url =
-                URL.createObjectURL(
-                    blob
-                );
-
-
-            player.src = url;
-
-            player.currentTime = 0;
-
-
-            await player.play();
-
-
-            status.textContent =
-                "Test playback running. " +
-                "The long-silence encoder is not yet being " +
-                "used for this test.";
-
-
-            player.addEventListener(
-                "ended",
-                () => {
-
-                    URL.revokeObjectURL(
-                        url
-                    );
-
-                    resetAlarmUI();
-
-                    status.textContent =
-                        "Alarm finished.";
-                },
-                { once: true }
-            );
-
-
-        } catch (error) {
-
-            console.error(error);
-
-            status.textContent =
-                "Audio test failed: " +
-                error.message;
-
-            resetAlarmUI();
+            return;
         }
+
+
+        /*
+         * No generated alarm yet.
+         */
+        status.textContent =
+            "Generate the compact alarm first " +
+            "using the Audio System section.";
     }
 );
 
 
-/* -------------------------------------------------------
- * Progress
- * ----------------------------------------------------- */
+stopButton.addEventListener(
+    "click",
+    () => {
+
+        /*
+         * Stop a currently playing alarm.
+         */
+        if (alarmRunning) {
+
+            player.pause();
+
+            player.currentTime =
+                0;
+
+
+            alarmRunning =
+                false;
+
+
+            startButton.disabled =
+                false;
+
+            stopButton.disabled =
+                true;
+
+
+            status.textContent =
+                "Alarm stopped.";
+        }
+
+
+        /*
+         * Also stop generation if active.
+         */
+        stopGeneration();
+    }
+);
+
+
+/* ========================================================
+   PLAYER EVENTS
+   ======================================================== */
 
 player.addEventListener(
     "timeupdate",
@@ -1171,7 +1981,38 @@ player.addEventListener(
 );
 
 
+player.addEventListener(
+    "ended",
+    () => {
+
+        alarmRunning =
+            false;
+
+
+        startButton.disabled =
+            false;
+
+        stopButton.disabled =
+            true;
+
+
+        progressFill.style.width =
+            "100%";
+
+
+        status.textContent =
+            "Alarm finished.";
+    }
+);
+
+
+/* ========================================================
+   INITIALIZE
+   ======================================================== */
+
 loadSounds();
+
+testAudioCapabilities();
 
 </script>
 
