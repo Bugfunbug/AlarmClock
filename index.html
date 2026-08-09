@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private Alarm Test</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                         "Segoe UI", sans-serif;
+            background: #f2f2f7;
+            color: #1c1c1e;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 420px;
+            padding: 28px;
+            border-radius: 24px;
+            background: white;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 28px;
+        }
+
+        .description {
+            margin: 0 0 28px;
+            color: #6e6e73;
+            line-height: 1.5;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #d1d1d6;
+            border-radius: 12px;
+            font-size: 18px;
+            background: #f9f9fb;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 20px;
+            padding: 15px;
+            border: 0;
+            border-radius: 14px;
+            background: #007aff;
+            color: white;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button:active {
+            opacity: 0.75;
+        }
+
+        audio {
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        #status {
+            margin-top: 18px;
+            padding: 14px;
+            border-radius: 12px;
+            background: #f2f2f7;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="card">
+        <h1>Private Alarm Test</h1>
+
+        <p class="description">
+            This test generates silence followed by a short tone.
+            Start it, lock your iPhone, and see whether the tone
+            plays through your earbuds.
+        </p>
+
+        <label for="silence">Silence duration (seconds)</label>
+        <input
+            id="silence"
+            type="number"
+            min="1"
+            max="300"
+            value="10"
+        >
+
+        <button id="start">
+            Generate &amp; Play
+        </button>
+
+        <div id="status">
+            Ready.
+        </div>
+
+        <audio id="player" controls></audio>
+    </main>
+
+    <script>
+        const startButton = document.getElementById("start");
+        const silenceInput = document.getElementById("silence");
+        const player = document.getElementById("player");
+        const status = document.getElementById("status");
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        function generateWav(silenceSeconds) {
+            const sampleRate = 44100;
+            const channels = 1;
+            const bitsPerSample = 16;
+
+            const toneSeconds = 2;
+            const totalSeconds = silenceSeconds + toneSeconds;
+            const totalSamples = Math.floor(sampleRate * totalSeconds);
+
+            const bytesPerSample = bitsPerSample / 8;
+            const dataSize = totalSamples * channels * bytesPerSample;
+
+            const buffer = new ArrayBuffer(44 + dataSize);
+            const view = new DataView(buffer);
+
+            // WAV header
+            writeString(view, 0, "RIFF");
+            view.setUint32(4, 36 + dataSize, true);
+            writeString(view, 8, "WAVE");
+
+            writeString(view, 12, "fmt ");
+            view.setUint32(16, 16, true);       // PCM header size
+            view.setUint16(20, 1, true);        // PCM format
+            view.setUint16(22, channels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(
+                28,
+                sampleRate * channels * bytesPerSample,
+                true
+            );
+            view.setUint16(
+                32,
+                channels * bytesPerSample,
+                true
+            );
+            view.setUint16(34, bitsPerSample, true);
+
+            writeString(view, 36, "data");
+            view.setUint32(40, dataSize, true);
+
+            const silenceSamples = Math.floor(
+                sampleRate * silenceSeconds
+            );
+
+            const toneFrequency = 880;
+
+            for (let i = 0; i < totalSamples; i++) {
+                let sample = 0;
+
+                // Only generate sound after the silence period.
+                if (i >= silenceSamples) {
+                    const t = (i - silenceSamples) / sampleRate;
+
+                    // Short fade-in/out to avoid clicks.
+                    const fadeTime = 0.02;
+
+                    let envelope = 1;
+
+                    if (t < fadeTime) {
+                        envelope = t / fadeTime;
+                    }
+
+                    if (t > toneSeconds - fadeTime) {
+                        envelope =
+                            (toneSeconds - t) / fadeTime;
+                    }
+
+                    sample =
+                        Math.sin(2 * Math.PI * toneFrequency * t)
+                        * 0.35
+                        * envelope;
+                }
+
+                const value = Math.max(
+                    -1,
+                    Math.min(1, sample)
+                );
+
+                view.setInt16(
+                    44 + i * 2,
+                    value < 0
+                        ? value * 0x8000
+                        : value * 0x7fff,
+                    true
+                );
+            }
+
+            return new Blob(
+                [buffer],
+                { type: "audio/wav" }
+            );
+        }
+
+        startButton.addEventListener("click", async () => {
+            const silenceSeconds =
+                Number(silenceInput.value);
+
+            if (
+                !Number.isFinite(silenceSeconds) ||
+                silenceSeconds < 1 ||
+                silenceSeconds > 300
+            ) {
+                status.textContent =
+                    "Please enter a duration between 1 and 300 seconds.";
+                return;
+            }
+
+            status.textContent =
+                "Generating audio...";
+
+            const wav = generateWav(silenceSeconds);
+            const url = URL.createObjectURL(wav);
+
+            player.src = url;
+
+            try {
+                await player.play();
+
+                status.textContent =
+                    `Playing ${silenceSeconds} seconds of silence. ` +
+                    `The test tone will play afterward. ` +
+                    `You can now lock the phone.`;
+            } catch (error) {
+                console.error(error);
+
+                status.textContent =
+                    "iOS prevented playback. Tap Generate & Play again.";
+            }
+        });
+
+        player.addEventListener("ended", () => {
+            status.textContent =
+                "Finished.";
+        });
+    </script>
+</body>
+</html>
