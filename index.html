@@ -1659,6 +1659,68 @@ function waitForMetadata(mediaElement) {
 }
 
 
+function waitForPlayable(mediaElement) {
+
+    /*
+     * Deliberately does NOT call .play(). Calling
+     * play()/pause() here (outside the original click
+     * gesture - generation can take minutes) taints the
+     * element's activation history on iOS Safari and can
+     * make it ineligible for background/lock-screen
+     * continuation later, even though Start Alarm's own
+     * play() call is a genuine, fresh tap. So we only ever
+     * call .play() from the Start Alarm click handler
+     * itself, and verify decodability passively instead.
+     */
+    return new Promise(resolve => {
+
+        if (mediaElement.readyState >= 4) {
+            // HAVE_ENOUGH_DATA already.
+            resolve();
+            return;
+        }
+
+        function cleanup() {
+
+            mediaElement.removeEventListener(
+                "canplaythrough",
+                onReady
+            );
+        }
+
+        function onReady() {
+
+            cleanup();
+
+            resolve();
+        }
+
+        mediaElement.addEventListener(
+            "canplaythrough",
+            onReady,
+            { once: true }
+        );
+
+        /*
+         * Blob URLs are already fully in memory (no
+         * network fetch involved), so canplaythrough
+         * normally fires almost immediately. Fall back
+         * to whatever readyState we've reached after a
+         * short timeout rather than blocking forever.
+         */
+        setTimeout(
+            () => {
+
+                cleanup();
+
+                resolve();
+            },
+            2000
+        );
+    });
+}
+
+
 async function verifyGeneratedAudio(url) {
 
     player.pause();
@@ -1684,24 +1746,14 @@ async function verifyGeneratedAudio(url) {
     }
 
 
-    /*
-     * Confirm actual playback starts, then reset -
-     * loadedmetadata alone doesn't guarantee Safari
-     * can decode audible samples.
-     */
-    try {
+    await waitForPlayable(player);
 
-        await player.play();
 
-        player.pause();
-
-        player.currentTime = 0;
-
-    } catch (error) {
+    if (player.readyState < 2) {
 
         throw new Error(
-            "Safari loaded metadata but could not start playback: " +
-            error.message
+            "Safari decoded metadata but the file never became " +
+            "ready to play (readyState " + player.readyState + ")."
         );
     }
 
