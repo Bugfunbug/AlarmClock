@@ -1291,22 +1291,395 @@ function testAudioCapabilities() {
 
 
     /*
-     * Enable the generator only if MediaRecorder
-     * AND at least one recordable mime type exist.
+     * Enable the generator if EITHER the fast WebCodecs path
+     * or the real-time MediaRecorder fallback is usable.
      */
+    const hasWebCodecs =
+        typeof AudioEncoder !== "undefined";
+
     generateButton.disabled =
-        !hasRecorder || !getRecordingMimeType();
+        !hasWebCodecs &&
+        (!hasRecorder || !getRecordingMimeType());
 }
 
 
 /* ========================================================
-   GENERATOR (real-time MediaRecorder prototype)
+   FAST GENERATOR (WebCodecs AudioEncoder + mp4-muxer)
    --------------------------------------------------------
-   Deliberately real-time for now: a 60 minute alarm takes
-   roughly 60 minutes to generate. This is intentional per
-   the current stage of the project - the fast WebCodecs +
-   manual MP4 muxing path is future work, not implemented
-   here (see notes at the bottom of this file).
+   This is the real fix for "a 1-hour alarm shouldn't take
+   1 hour to generate". AudioEncoder lets us push audio data
+   as fast as the CPU can encode it - nothing here is tied to
+   wall-clock time, so a 60-minute silence encodes in roughly
+   the time it takes to run the encoder over that much audio
+   (typically a few seconds on a phone), not 60 minutes.
+   
+   AudioEncoder only outputs encoded AAC chunks/frames - it
+   does NOT produce a playable file by itself. A real MP4
+   container (ftyp/moov/mdat boxes, sample tables, timing)
+   still has to be built around those chunks. Rather than
+   hand-write that box-level ISO-BMFF logic (high risk of
+   subtle bugs that only show up as "Safari can't play this"),
+   this uses mp4-muxer - a small, dependency-free, purely
+   client-side library written specifically to sit on top of
+   WebCodecs output. It's loaded on demand from a CDN (no
+   backend, no build step, still just static files via GitHub
+   Pages) and only when this path is actually used.
+   ======================================================== */
+
+async function generateFastAlarm() {
+
+    if (typeof AudioEncoder === "undefined") {
+
+        throw new Error(
+            "AudioEncoder (WebCodecs) is not available in this browser."
+        );
+    }
+
+
+    const duration =
+        getDurationSeconds();
+
+    if (duration <= 0) {
+
+        throw new Error(
+            "Duration must be greater than zero."
+        );
+    }
+
+
+    if (!selectedSound) {
+
+        throw new Error(
+            "No alarm sound selected."
+        );
+    }
+
+
+    status.textContent =
+        "Loading alarm sound...";
+
+
+    const response =
+        await fetch(
+            soundURL(selectedSound)
+        );
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Unable to load alarm sound file."
+        );
+    }
+
+
+    const soundData =
+        await response.arrayBuffer();
+
+
+    /*
+     * A throwaway context purely to decode PCM samples.
+     * decodeAudioData() doesn't touch the audio hardware and
+     * doesn't need to be "resumed" by a user gesture - it's
+     * just a computation, unlike actually playing audio.
+     */
+    const decodeContext =
+        new (window.AudioContext || window.webkitAudioContext)();
+
+    let alarmBuffer;
+
+    try {
+
+        alarmBuffer =
+            await decodeContext.decodeAudioData(
+                soundData
+            );
+
+    } finally {
+
+        decodeContext.close().catch(() => {});
+    }
+
+
+    const sampleRate =
+        alarmBuffer.sampleRate;
+
+    const numberOfChannels =
+        alarmBuffer.numberOfChannels;
+
+
+    const encoderConfig = {
+
+        codec: "mp4a.40.2",
+
+        sampleRate,
+
+        numberOfChannels,
+
+        bitrate: 96000 * numberOfChannels
+
+    };
+
+
+    const support =
+        await AudioEncoder.isConfigSupported(
+            encoderConfig
+        );
+
+    if (!support.supported) {
+
+        throw new Error(
+            "This AAC configuration is not supported by " +
+            "AudioEncoder on this device."
+        );
+    }
+
+
+    status.textContent =
+        "Loading MP4 muxer...";
+
+
+    const { Muxer, ArrayBufferTarget } =
+        await import(
+            "https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.mjs"
+        );
+
+
+    const muxer =
+        new Muxer({
+
+            target: new ArrayBufferTarget(),
+
+            audio: {
+                codec: "aac",
+                sampleRate,
+                numberOfChannels
+            },
+
+            fastStart: "in-memory"
+
+        });
+
+
+    let encodeError = null;
+
+    const encoder =
+        new AudioEncoder({
+
+            output: (chunk, meta) => {
+
+                muxer.addAudioChunk(
+                    chunk,
+                    meta
+                );
+            },
+
+            error: error => {
+
+                encodeError = error;
+            }
+
+        });
+
+    encoder.configure(
+        encoderConfig
+    );
+
+
+    const totalSilenceFrames =
+        Math.round(
+            duration * sampleRate
+        );
+
+    /*
+     * Push silence in ~1 second chunks. This keeps the
+     * number of AudioData objects reasonable (thousands,
+     * not millions) even for very long durations, without
+     * ever holding the whole silence duration as one giant
+     * PCM buffer.
+     */
+    const chunkFrames =
+        sampleRate;
+
+    let framesEncoded = 0;
+
+    let chunkCounter = 0;
+
+
+    status.textContent =
+        "Encoding silence...";
+
+
+    while (framesEncoded < totalSilenceFrames) {
+
+        if (encodeError) {
+            throw encodeError;
+        }
+
+
+        const framesThisChunk =
+            Math.min(
+                chunkFrames,
+                totalSilenceFrames - framesEncoded
+            );
+
+        /*
+         * A freshly-allocated Float32Array is already
+         * zero-filled - that's our silence.
+         */
+        const silenceData =
+            new Float32Array(
+                framesThisChunk * numberOfChannels
+            );
+
+        const timestampMicros =
+            Math.round(
+                (framesEncoded / sampleRate) * 1e6
+            );
+
+        const audioData =
+            new AudioData({
+                format: "f32-planar",
+                sampleRate,
+                numberOfFrames: framesThisChunk,
+                numberOfChannels,
+                timestamp: timestampMicros,
+                data: silenceData
+            });
+
+        encoder.encode(audioData);
+
+        audioData.close();
+
+
+        framesEncoded += framesThisChunk;
+
+        chunkCounter += 1;
+
+
+        const percentage =
+            (framesEncoded / totalSilenceFrames) * 90;
+
+        progress.style.display = "block";
+
+        progressFill.style.width =
+            `${percentage}%`;
+
+        progressText.textContent =
+            `Encoding silence: ` +
+            `${formatDuration(framesEncoded / sampleRate)} / ` +
+            `${formatDuration(duration)}`;
+
+        status.textContent =
+            progressText.textContent;
+
+
+        /*
+         * Yield to the event loop periodically so the tab
+         * stays responsive and the encoder's internal queue
+         * doesn't grow unbounded.
+         */
+        if (chunkCounter % 20 === 0) {
+
+            await new Promise(
+                resolve => setTimeout(resolve, 0)
+            );
+        }
+    }
+
+
+    if (encodeError) {
+        throw encodeError;
+    }
+
+
+    status.textContent =
+        "Encoding alarm sound...";
+
+
+    /*
+     * Build one planar buffer covering the whole alarm
+     * sound and encode it as a single AudioData.
+     */
+    const alarmFrames =
+        alarmBuffer.length;
+
+    const planarAlarm =
+        new Float32Array(
+            alarmFrames * numberOfChannels
+        );
+
+    for (
+        let channel = 0;
+        channel < numberOfChannels;
+        channel++
+    ) {
+
+        planarAlarm.set(
+            alarmBuffer.getChannelData(channel),
+            channel * alarmFrames
+        );
+    }
+
+    const alarmTimestampMicros =
+        Math.round(
+            (framesEncoded / sampleRate) * 1e6
+        );
+
+    const alarmAudioData =
+        new AudioData({
+            format: "f32-planar",
+            sampleRate,
+            numberOfFrames: alarmFrames,
+            numberOfChannels,
+            timestamp: alarmTimestampMicros,
+            data: planarAlarm
+        });
+
+    encoder.encode(alarmAudioData);
+
+    alarmAudioData.close();
+
+
+    status.textContent =
+        "Finalizing MP4 file...";
+
+    progressFill.style.width = "95%";
+
+
+    await encoder.flush();
+
+    encoder.close();
+
+
+    if (encodeError) {
+        throw encodeError;
+    }
+
+
+    muxer.finalize();
+
+
+    const { buffer } =
+        muxer.target;
+
+    progressFill.style.width = "100%";
+
+
+    return new Blob(
+        [buffer],
+        { type: "audio/mp4" }
+    );
+}
+
+
+/* ========================================================
+   FALLBACK GENERATOR (real-time MediaRecorder)
+   --------------------------------------------------------
+   Used only when AudioEncoder isn't available, or if the
+   fast path above fails for some reason. Deliberately
+   real-time: a 60 minute alarm takes roughly 60 minutes to
+   generate this way. This was the original/only generator
+   before the fast WebCodecs path existed above.
    ======================================================== */
 
 async function generateCompactAlarm(audioContext, mimeType) {
@@ -1815,14 +2188,17 @@ generateButton.addEventListener(
         }
 
 
+        const hasFastPath =
+            typeof AudioEncoder !== "undefined";
+
         const mimeType =
             getRecordingMimeType();
 
-
-        if (!mimeType) {
+        if (!hasFastPath && !mimeType) {
 
             status.textContent =
-                "This browser has no supported compressed audio recorder.";
+                "No generator available on this browser " +
+                "(no AudioEncoder, no compressed audio recorder).";
 
             return;
         }
@@ -1835,42 +2211,94 @@ generateButton.addEventListener(
         invalidateGeneratedAlarm();
 
 
-        /*
-         * IMPORTANT: create + resume the AudioContext
-         * as the very first thing, synchronously in
-         * this click handler, before any other await.
-         * On iOS Safari, an AudioContext only reliably
-         * unlocks when it's created/resumed within the
-         * original user-gesture call stack. The previous
-         * version created the context after an
-         * `await fetch(...)`, which broke that chain and
-         * is the most likely reason the generated file
-         * ended up silent.
-         */
-        generationAudioContext =
-            new AudioContext();
-
-        try {
-
-            await generationAudioContext.resume();
-
-        } catch (error) {
-
-            console.error(error);
-        }
+        let blob = null;
+        let methodLabel = null;
 
 
         try {
 
-            status.textContent =
-                "Preparing generator...";
+            /*
+             * Prefer the fast WebCodecs path - it doesn't
+             * wait out the actual alarm duration.
+             */
+            if (hasFastPath) {
+
+                try {
+
+                    status.textContent =
+                        "Preparing fast generator...";
+
+                    blob =
+                        await generateFastAlarm();
+
+                    methodLabel =
+                        "fast WebCodecs generator";
+
+                } catch (fastError) {
+
+                    console.error(fastError);
+
+                    status.textContent =
+                        "Fast generator failed (" +
+                        fastError.message +
+                        ") - falling back to the real-time generator...";
+
+                    blob = null;
+                }
+            }
 
 
-            const blob =
-                await generateCompactAlarm(
-                    generationAudioContext,
-                    mimeType
-                );
+            if (!blob) {
+
+                if (!mimeType) {
+
+                    throw new Error(
+                        "Fast generator failed and no compressed " +
+                        "audio recorder is available as a fallback."
+                    );
+                }
+
+
+                /*
+                 * IMPORTANT: on the direct (non-fallback) path this
+                 * runs as the very first thing in the click handler,
+                 * before any other await. On iOS Safari, an
+                 * AudioContext only reliably unlocks when it's
+                 * created/resumed within the original user-gesture
+                 * call stack - creating it after an `await fetch(...)`
+                 * (as the original version did) is what caused the
+                 * generated file to end up silent. When we reach this
+                 * as a fallback after a failed fast-path attempt, that
+                 * guarantee no longer strictly holds, but this branch
+                 * only runs on browsers without WebCodecs at all or on
+                 * rare fast-path failures, so it's an acceptable
+                 * trade-off rather than the common case.
+                 */
+                generationAudioContext =
+                    new AudioContext();
+
+                try {
+
+                    await generationAudioContext.resume();
+
+                } catch (error) {
+
+                    console.error(error);
+                }
+
+
+                status.textContent =
+                    "Preparing real-time generator...";
+
+                blob =
+                    await generateCompactAlarm(
+                        generationAudioContext,
+                        mimeType
+                    );
+
+                methodLabel =
+                    "real-time recorder fallback";
+            }
 
 
             status.textContent =
@@ -1898,7 +2326,8 @@ generateButton.addEventListener(
 
 
             status.textContent =
-                `Verified: ${formatDuration(verifiedDuration)} ` +
+                `Verified (${methodLabel}): ` +
+                `${formatDuration(verifiedDuration)} ` +
                 `(${sizeMB.toFixed(2)} MB, ${blob.type}). ` +
                 `Ready to start.`;
 
