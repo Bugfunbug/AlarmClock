@@ -1326,6 +1326,44 @@ function testAudioCapabilities() {
    Pages) and only when this path is actually used.
    ======================================================== */
 
+function downmixToMono(audioBuffer) {
+
+    if (audioBuffer.numberOfChannels === 1) {
+
+        return audioBuffer.getChannelData(0);
+    }
+
+
+    const length =
+        audioBuffer.length;
+
+    const channelCount =
+        audioBuffer.numberOfChannels;
+
+    const mono =
+        new Float32Array(length);
+
+    for (
+        let channel = 0;
+        channel < channelCount;
+        channel++
+    ) {
+
+        const channelData =
+            audioBuffer.getChannelData(channel);
+
+        for (let i = 0; i < length; i++) {
+
+            mono[i] +=
+                channelData[i] / channelCount;
+        }
+    }
+
+
+    return mono;
+}
+
+
 async function generateFastAlarm() {
 
     if (typeof AudioEncoder === "undefined") {
@@ -1403,9 +1441,38 @@ async function generateFastAlarm() {
     const sampleRate =
         alarmBuffer.sampleRate;
 
-    const numberOfChannels =
-        alarmBuffer.numberOfChannels;
+    /*
+     * Always encode mono, regardless of the source file's
+     * channel count. This isn't a compromise on alarm
+     * clarity (it's a beep/ringtone, not music) - it directly
+     * halves (or more) the total memory footprint for long
+     * durations, which is the actual cause of the crash below.
+     */
+    const numberOfChannels = 1;
 
+    const monoAlarmSamples =
+        downmixToMono(alarmBuffer);
+
+
+    /*
+     * IMPORTANT - this bitrate choice is the main fix for the
+     * "3 hour alarm crashes the Safari tab" problem.
+     *
+     * The previous default (96 kbps per channel, i.e. 192 kbps
+     * for a stereo sound) meant 3 hours of encoded AAC data -
+     * even though almost all of it is silence - came out to
+     * roughly 260 MB, held in memory. On top of that,
+     * `fastStart: "in-memory"` (below) doubled a chunk of that,
+     * and Safari's own decode buffer for the verification step
+     * added more on top. iOS Safari kills a tab well under what
+     * that adds up to.
+     *
+     * 48 kbps mono is plenty for a beep/ringtone/alarm sound
+     * (this isn't music), and at that rate 3 hours of encoded
+     * audio is about 65 MB instead of 260 MB - a ~4x reduction
+     * before the fastStart change below even helps.
+     */
+    const AAC_TARGET_BITRATE = 48000;
 
     const encoderConfig = {
 
@@ -1415,7 +1482,7 @@ async function generateFastAlarm() {
 
         numberOfChannels,
 
-        bitrate: 96000 * numberOfChannels
+        bitrate: AAC_TARGET_BITRATE
 
     };
 
@@ -1455,7 +1522,18 @@ async function generateFastAlarm() {
                 numberOfChannels
             },
 
-            fastStart: "in-memory"
+            /*
+             * "in-memory" keeps every encoded chunk buffered
+             * separately (on top of the final assembled file)
+             * so it can rewrite the header with correct offsets
+             * before the data. `false` writes sample data out
+             * as it arrives and puts the metadata at the end
+             * instead - this doesn't matter for playback here,
+             * since the whole file is loaded as one local Blob
+             * anyway rather than streamed over a network, but it
+             * meaningfully cuts peak memory during generation.
+             */
+            fastStart: false
 
         });
 
@@ -1603,23 +1681,11 @@ async function generateFastAlarm() {
     const alarmFrames =
         alarmBuffer.length;
 
-    const planarAlarm =
-        new Float32Array(
-            alarmFrames * numberOfChannels
-        );
-
-    for (
-        let channel = 0;
-        channel < numberOfChannels;
-        channel++
-    ) {
-
-        planarAlarm.set(
-            alarmBuffer.getChannelData(channel),
-            channel * alarmFrames
-        );
-    }
-
+    /*
+     * monoAlarmSamples is already a flat, single-channel
+     * Float32Array of exactly this length - no per-channel
+     * concatenation needed now that we always encode mono.
+     */
     const alarmTimestampMicros =
         Math.round(
             (framesEncoded / sampleRate) * 1e6
@@ -1632,7 +1698,7 @@ async function generateFastAlarm() {
             numberOfFrames: alarmFrames,
             numberOfChannels,
             timestamp: alarmTimestampMicros,
-            data: planarAlarm
+            data: monoAlarmSamples
         });
 
     encoder.encode(alarmAudioData);
@@ -1750,7 +1816,16 @@ async function generateCompactAlarm(audioContext, mimeType) {
         new MediaRecorder(
             destination.stream,
             {
-                mimeType
+                mimeType,
+                /*
+                 * Same reasoning as the fast generator: this is
+                 * a beep/ringtone, not music, and a lower bitrate
+                 * meaningfully reduces memory pressure for long
+                 * durations. Some browsers ignore this hint for
+                 * certain mimeTypes, which is fine - it's a
+                 * best-effort cap, not a requirement.
+                 */
+                audioBitsPerSecond: 48000
             }
         );
 
@@ -2185,6 +2260,47 @@ generateButton.addEventListener(
                 "Please enter a duration greater than zero.";
 
             return;
+        }
+
+
+        /*
+         * Rough size estimate at the 48 kbps mono target used
+         * by both generators. This can't prevent a crash on its
+         * own (a page crash from memory pressure isn't something
+         * a try/catch can intercept), but it gives an explicit
+         * heads-up before committing to a very long generation
+         * instead of silently attempting it and possibly taking
+         * the tab down, per "be explicit about test failures
+         * rather than pretending something works".
+         */
+        const estimatedMB =
+            (48000 / 8) *
+            getDurationSeconds() /
+            (1024 * 1024);
+
+        const LONG_DURATION_WARNING_SECONDS =
+            2 * 3600;
+
+        if (
+            getDurationSeconds() >
+            LONG_DURATION_WARNING_SECONDS
+        ) {
+
+            const proceed =
+                window.confirm(
+                    `This will generate an estimated ~${estimatedMB.toFixed(0)} MB ` +
+                    `file for a ${formatDuration(getDurationSeconds())} alarm. ` +
+                    `Very long durations can push Safari on iPhone past its ` +
+                    `per-tab memory limit and crash the page. Continue anyway?`
+                );
+
+            if (!proceed) {
+
+                status.textContent =
+                    "Generation cancelled.";
+
+                return;
+            }
         }
 
 
