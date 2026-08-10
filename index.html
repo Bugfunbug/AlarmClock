@@ -666,7 +666,7 @@
 
 
     <div style="text-align:center;color:#8e8e93;font-size:11px;margin-top:28px;">
-        Build marker: esds-single-config-fix-4
+        Build marker: esds-corruption-repair-5
     </div>
 
 </main>
@@ -1873,6 +1873,450 @@ function deepInspectAudioTrack(view, totalLength) {
 
 
     return lines;
+}
+
+
+/* ========================================================
+   ESDS CORRUPTION FIX (mp4-muxer bug workaround)
+   --------------------------------------------------------
+   Confirmed by hand-decoding the esds bytes from a real
+   generated file, TWICE, byte-for-byte identical: mp4-muxer
+   is writing an extra, spurious nested
+   ES_Descriptor > DecoderConfigDescriptor > DecSpecificInfo
+   tree INSIDE where the raw AudioSpecificConfig bytes should
+   be. The real config is in there (confirmed against the
+   spec by hand), just wrapped in a duplicate layer that
+   shouldn't exist. Safari's strict decoder rejects this;
+   this function surgically removes the duplicate layer and
+   cascades the resulting size reduction through every
+   ancestor box and the stco offset table.
+   ======================================================== */
+
+function readExpandableLength(view, offset) {
+
+    let value = 0;
+    let bytesConsumed = 0;
+    let byte;
+
+
+    do {
+
+        byte =
+            view.getUint8(offset + bytesConsumed);
+
+        value =
+            (value << 7) | (byte & 0x7f);
+
+        bytesConsumed += 1;
+
+    } while (
+        (byte & 0x80) !== 0 &&
+        bytesConsumed < 4
+    );
+
+
+    return { value, bytesConsumed };
+}
+
+
+async function fixMuxerEsdsBug(blob) {
+
+    const originalBuffer =
+        await blob.arrayBuffer();
+
+    const view =
+        new DataView(originalBuffer);
+
+    const total =
+        originalBuffer.byteLength;
+
+
+    function fail(reason) {
+        return { blob, patched: false, reason };
+    }
+
+
+    const moovBox =
+        findChildBox(view, 0, total, "moov");
+
+    if (!moovBox) return fail("No moov box found.");
+
+
+    const trakBox =
+        findChildBox(
+            view,
+            moovBox.start + moovBox.headerSize,
+            moovBox.start + moovBox.size,
+            "trak"
+        );
+
+    const mdiaBox =
+        trakBox &&
+        findChildBox(
+            view,
+            trakBox.start + trakBox.headerSize,
+            trakBox.start + trakBox.size,
+            "mdia"
+        );
+
+    const minfBox =
+        mdiaBox &&
+        findChildBox(
+            view,
+            mdiaBox.start + mdiaBox.headerSize,
+            mdiaBox.start + mdiaBox.size,
+            "minf"
+        );
+
+    const stblBox =
+        minfBox &&
+        findChildBox(
+            view,
+            minfBox.start + minfBox.headerSize,
+            minfBox.start + minfBox.size,
+            "stbl"
+        );
+
+    const stsdBox =
+        stblBox &&
+        findChildBox(
+            view,
+            stblBox.start + stblBox.headerSize,
+            stblBox.start + stblBox.size,
+            "stsd"
+        );
+
+    if (!trakBox || !mdiaBox || !minfBox || !stblBox || !stsdBox) {
+        return fail("Could not locate the full trak/mdia/minf/stbl/stsd chain.");
+    }
+
+
+    const stcoBox =
+        findChildBox(
+            view,
+            stblBox.start + stblBox.headerSize,
+            stblBox.start + stblBox.size,
+            "stco"
+        );
+
+    if (!stcoBox) return fail("Could not locate stco box.");
+
+
+    const stsdBody =
+        stsdBox.start + stsdBox.headerSize;
+
+    const entryStart =
+        stsdBody + 8;
+
+    const entrySize =
+        view.getUint32(entryStart, false);
+
+    const entryType =
+        String.fromCharCode(
+            view.getUint8(entryStart + 4),
+            view.getUint8(entryStart + 5),
+            view.getUint8(entryStart + 6),
+            view.getUint8(entryStart + 7)
+        );
+
+    if (entryType !== "mp4a") {
+        return fail(`Sample entry type is '${entryType}', not 'mp4a'.`);
+    }
+
+
+    const sampleEntryBody =
+        entryStart + 8;
+
+    const esdsBox =
+        findChildBox(
+            view,
+            sampleEntryBody + 28,
+            entryStart + entrySize,
+            "esds"
+        );
+
+    if (!esdsBox) return fail("No esds box found.");
+
+
+    /* Walk the descriptor tree to the DecSpecificInfo tag. */
+
+    let offset =
+        esdsBox.start + esdsBox.headerSize + 4;
+
+    if (view.getUint8(offset) !== 0x03) {
+        return fail("esds does not start with ES_DescrTag.");
+    }
+
+    offset += 1;
+
+    const esLen =
+        readExpandableLength(view, offset);
+
+    const esDescrLenOffset = offset;
+
+    offset += esLen.bytesConsumed;
+
+    offset += 3;
+    /* ES_ID(2) + flags(1) - assumes no optional fields, true
+       for everything this app's own generator produces. */
+
+    if (view.getUint8(offset) !== 0x04) {
+        return fail("Expected DecoderConfigDescrTag.");
+    }
+
+    offset += 1;
+
+    const dcdLen =
+        readExpandableLength(view, offset);
+
+    const dcdLenOffset = offset;
+
+    offset += dcdLen.bytesConsumed;
+
+    offset += 13;
+    /* objectType(1) + streamType/flags(1) + bufferSizeDB(3) +
+       maxBitrate(4) + avgBitrate(4) = 13 */
+
+    if (view.getUint8(offset) !== 0x05) {
+        return fail("Expected DecSpecificInfoTag.");
+    }
+
+    const dsiTagStart = offset;
+
+    offset += 1;
+
+    const dsiLen =
+        readExpandableLength(view, offset);
+
+    offset += dsiLen.bytesConsumed;
+
+    const dsiContentStart = offset;
+
+    const declaredLen = dsiLen.value;
+
+
+    if (view.getUint8(dsiContentStart) !== 0x03) {
+
+        return fail(
+            "esds does not match the known corruption pattern " +
+            "(no nested ES_DescrTag found) - leaving file as-is."
+        );
+    }
+
+
+    /* Drill into the spurious nested tree to find the real config. */
+
+    let innerOffset = dsiContentStart;
+
+    innerOffset += 1;
+
+    const innerEsLen =
+        readExpandableLength(view, innerOffset);
+
+    innerOffset += innerEsLen.bytesConsumed;
+
+    innerOffset += 3;
+
+    if (view.getUint8(innerOffset) !== 0x04) {
+        return fail("Unexpected nested structure (no inner DecoderConfigDescrTag).");
+    }
+
+    innerOffset += 1;
+
+    const innerDcdLen =
+        readExpandableLength(view, innerOffset);
+
+    innerOffset += innerDcdLen.bytesConsumed;
+
+    innerOffset += 13;
+
+    if (view.getUint8(innerOffset) !== 0x05) {
+        return fail("Unexpected nested structure (no inner DecSpecificInfoTag).");
+    }
+
+    innerOffset += 1;
+
+    const innerDsiLen =
+        readExpandableLength(view, innerOffset);
+
+    innerOffset += innerDsiLen.bytesConsumed;
+
+    const trueConfigStart = innerOffset;
+
+    const trueConfigLen = innerDsiLen.value;
+
+
+    if (
+        trueConfigLen <= 0 ||
+        trueConfigLen > 32 ||
+        trueConfigStart + trueConfigLen > esdsBox.start + esdsBox.size
+    ) {
+
+        return fail(
+            "Extracted config length looks implausible - aborting fix " +
+            "rather than risk making things worse."
+        );
+    }
+
+
+    const trueConfigBytes =
+        new Uint8Array(
+            originalBuffer.slice(
+                trueConfigStart,
+                trueConfigStart + trueConfigLen
+            )
+        );
+
+
+    /* --- Rebuild a correct, minimal DecSpecificInfoTag --- */
+
+    const dsiLenFieldSize =
+        dsiLen.bytesConsumed;
+
+    if (trueConfigLen > 127) {
+        return fail("True config too large for single-byte length encoding.");
+    }
+
+    const newDsiBytes =
+        new Uint8Array(1 + dsiLenFieldSize + trueConfigLen);
+
+    newDsiBytes[0] = 0x05;
+
+    for (let i = 0; i < dsiLenFieldSize - 1; i++) {
+        newDsiBytes[1 + i] = 0x80;
+    }
+
+    newDsiBytes[dsiLenFieldSize] =
+        trueConfigLen & 0x7f;
+
+    newDsiBytes.set(
+        trueConfigBytes,
+        1 + dsiLenFieldSize
+    );
+
+
+    const byteDelta =
+        declaredLen - trueConfigLen;
+
+    if (byteDelta <= 0) {
+        return fail("Fix would not shrink the file - aborting.");
+    }
+
+
+    /* --- Assemble the corrected file --- */
+
+    const beforeLen = dsiTagStart;
+
+    const afterStart = dsiContentStart + declaredLen;
+
+    const afterLen = total - afterStart;
+
+
+    const outBuffer =
+        new ArrayBuffer(
+            beforeLen + newDsiBytes.length + afterLen
+        );
+
+    const outBytes =
+        new Uint8Array(outBuffer);
+
+
+    outBytes.set(
+        new Uint8Array(originalBuffer, 0, beforeLen),
+        0
+    );
+
+    outBytes.set(
+        newDsiBytes,
+        beforeLen
+    );
+
+    outBytes.set(
+        new Uint8Array(originalBuffer, afterStart, afterLen),
+        beforeLen + newDsiBytes.length
+    );
+
+
+    const outView =
+        new DataView(outBuffer);
+
+
+    function patchU32(offset, delta) {
+
+        outView.setUint32(
+            offset,
+            outView.getUint32(offset, false) - delta,
+            false
+        );
+    }
+
+
+    function patchExpandableLength(offset, bytesConsumed, delta) {
+
+        let oldValue = 0;
+
+        for (let i = 0; i < bytesConsumed; i++) {
+
+            oldValue =
+                (oldValue << 7) |
+                (outView.getUint8(offset + i) & 0x7f);
+        }
+
+        const newValue =
+            oldValue - delta;
+
+        for (let i = 0; i < bytesConsumed - 1; i++) {
+            outView.setUint8(offset + i, 0x80);
+        }
+
+        outView.setUint8(
+            offset + bytesConsumed - 1,
+            newValue & 0x7f
+        );
+    }
+
+
+    /* All of these offsets are before beforeLen, so unchanged
+       in position in outBytes - only their declared VALUES
+       need to shrink by byteDelta. */
+
+    patchExpandableLength(dcdLenOffset, dcdLen.bytesConsumed, byteDelta);
+    patchExpandableLength(esDescrLenOffset, esLen.bytesConsumed, byteDelta);
+    patchU32(esdsBox.start, byteDelta);
+    patchU32(entryStart, byteDelta);
+    patchU32(stsdBox.start, byteDelta);
+    patchU32(stblBox.start, byteDelta);
+    patchU32(minfBox.start, byteDelta);
+    patchU32(mdiaBox.start, byteDelta);
+    patchU32(trakBox.start, byteDelta);
+    patchU32(moovBox.start, byteDelta);
+
+
+    /* stco lives after stsd within stbl, so its position in the
+       output shifted earlier by byteDelta too - and every offset
+       it stores (pointing into mdat) needs the same reduction,
+       since mdat itself now starts byteDelta bytes earlier. */
+
+    const newStcoBodyStart =
+        (stcoBox.start + stcoBox.headerSize) - byteDelta;
+
+    const stcoEntryCount =
+        outView.getUint32(newStcoBodyStart + 4, false);
+
+    for (let i = 0; i < stcoEntryCount; i++) {
+
+        const entryOffset =
+            newStcoBodyStart + 8 + i * 4;
+
+        patchU32(entryOffset, byteDelta);
+    }
+
+
+    return {
+        blob: new Blob([outBuffer], { type: blob.type }),
+        patched: true,
+        reason: `Removed ${byteDelta} bytes of duplicated codec config.`
+    };
 }
 
 
@@ -3163,6 +3607,40 @@ generateButton.addEventListener(
 
 
             /*
+             * Attempt the esds corruption fix. This is safe to run
+             * unconditionally - it checks for the exact known
+             * corruption signature first and does nothing if a
+             * file doesn't match it (e.g. the MediaRecorder
+             * fallback path, which doesn't use mp4-muxer at all).
+             */
+            let fixNote = "";
+
+            try {
+
+                const fixResult =
+                    await fixMuxerEsdsBug(blob);
+
+                if (fixResult.patched) {
+
+                    blob = fixResult.blob;
+
+                    fixNote =
+                        ` [esds fix applied: ${fixResult.reason}]`;
+
+                } else {
+
+                    fixNote =
+                        ` [esds fix not applied: ${fixResult.reason}]`;
+                }
+
+            } catch (fixError) {
+
+                fixNote =
+                    ` [esds fix threw an error: ${fixError.message}]`;
+            }
+
+
+            /*
              * Show the file's actual box structure regardless of
              * what happens next - this is the main diagnostic tool
              * available without Web Inspector.
@@ -3173,14 +3651,15 @@ generateButton.addEventListener(
                     await describeMp4Structure(blob);
 
                 showFileStructure(
-                    structureText
+                    structureText + "\n\n" + fixNote.trim()
                 );
 
             } catch (inspectError) {
 
                 showFileStructure(
                     "Could not inspect file: " +
-                    inspectError.message
+                    inspectError.message +
+                    "\n\n" + fixNote.trim()
                 );
             }
 
