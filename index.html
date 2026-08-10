@@ -666,7 +666,7 @@
 
 
     <div style="text-align:center;color:#8e8e93;font-size:11px;margin-top:28px;">
-        Build marker: mp4-structure-inspector-1
+        Build marker: mp4-structure-inspector-2
     </div>
 
 </main>
@@ -1097,6 +1097,8 @@ function createSoundElement(filename) {
              * any previously generated alarm file.
              */
             invalidateGeneratedAlarm();
+
+            fileStructure.style.display = "none";
         }
     );
 
@@ -2554,8 +2556,6 @@ function invalidateGeneratedAlarm() {
 
     startButton.disabled = true;
 
-    fileStructure.style.display = "none";
-
     if (!alarmRunning) {
 
         status.textContent =
@@ -2653,6 +2653,8 @@ generateButton.addEventListener(
         stopButton.disabled = false;
 
         invalidateGeneratedAlarm();
+
+        fileStructure.style.display = "none";
 
 
         let blob = null;
