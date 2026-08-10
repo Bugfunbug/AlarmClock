@@ -1563,6 +1563,76 @@ async function generateFastAlarm() {
     );
 
 
+    /*
+     * IMPORTANT - this is the real fix for the crash on long
+     * durations, and it's a different bug from the bitrate one.
+     *
+     * Nothing above stops JavaScript from calling encoder.encode()
+     * far faster than the encoder can actually consume input. Each
+     * encode() call hands over a full, uncompressed PCM chunk -
+     * that data has to sit *somewhere* until the encoder gets to
+     * it. Without pacing, a tight loop can queue up thousands of
+     * seconds of raw silence audio - megabytes each - all waiting
+     * at once. That backlog is sized by INPUT duration, completely
+     * independent of the output AAC bitrate, which is exactly why
+     * cutting the bitrate 4x didn't help: the bitrate only ever
+     * controlled the size of the finished file, not the size of
+     * this queue.
+     *
+     * The fix is to respect encoder.encodeQueueSize (part of the
+     * WebCodecs spec) and only push more once the encoder has
+     * actually caught up, using the 'dequeue' event to know when
+     * that happens. This bounds how much raw audio can be in
+     * flight at any moment to a small, constant amount, regardless
+     * of how long the alarm is.
+     */
+    function waitForEncoderCapacity(maxQueueSize) {
+
+        if (typeof encoder.encodeQueueSize !== "number") {
+
+            /*
+             * Backpressure introspection isn't available on this
+             * browser - fall back to a short yield so the loop at
+             * least isn't fully synchronous. Less safe than real
+             * backpressure, but this branch shouldn't be reachable
+             * given AudioEncoder is confirmed present.
+             */
+            return new Promise(
+                resolve => setTimeout(resolve, 0)
+            );
+        }
+
+        if (encoder.encodeQueueSize <= maxQueueSize) {
+
+            return Promise.resolve();
+        }
+
+        return new Promise(resolve => {
+
+            function onDequeue() {
+
+                if (encoder.encodeQueueSize <= maxQueueSize) {
+
+                    encoder.removeEventListener(
+                        "dequeue",
+                        onDequeue
+                    );
+
+                    resolve();
+                }
+            }
+
+            encoder.addEventListener(
+                "dequeue",
+                onDequeue
+            );
+        });
+    }
+
+
+    const MAX_QUEUED_CHUNKS = 4;
+
+
     const totalSilenceFrames =
         Math.round(
             duration * sampleRate
@@ -1573,7 +1643,8 @@ async function generateFastAlarm() {
      * number of AudioData objects reasonable (thousands,
      * not millions) even for very long durations, without
      * ever holding the whole silence duration as one giant
-     * PCM buffer.
+     * PCM buffer. Actual peak memory is now bounded by
+     * MAX_QUEUED_CHUNKS above, not by total duration.
      */
     const chunkFrames =
         sampleRate;
@@ -1588,6 +1659,15 @@ async function generateFastAlarm() {
 
 
     while (framesEncoded < totalSilenceFrames) {
+
+        if (encodeError) {
+            throw encodeError;
+        }
+
+
+        await waitForEncoderCapacity(
+            MAX_QUEUED_CHUNKS
+        );
 
         if (encodeError) {
             throw encodeError;
@@ -1652,11 +1732,12 @@ async function generateFastAlarm() {
 
 
         /*
-         * Yield to the event loop periodically so the tab
-         * stays responsive and the encoder's internal queue
-         * doesn't grow unbounded.
+         * Even when the encoder isn't applying backpressure
+         * (queue staying small because it's keeping up easily),
+         * yield periodically anyway so the tab's main thread
+         * doesn't look unresponsive during a long run.
          */
-        if (chunkCounter % 20 === 0) {
+        if (chunkCounter % 50 === 0) {
 
             await new Promise(
                 resolve => setTimeout(resolve, 0)
