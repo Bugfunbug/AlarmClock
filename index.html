@@ -283,6 +283,27 @@
             text-align: center;
         }
 
+        #file-structure {
+            display: none;
+            margin-top: 16px;
+            padding: 12px;
+
+            max-height: 260px;
+            overflow: auto;
+
+            border: 1px solid #d1d1d6;
+            border-radius: 12px;
+
+            background: white;
+            color: #3a3a3c;
+
+            font-family: ui-monospace, "SF Mono", Menlo, monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
         .diagnostics {
             padding: 14px;
 
@@ -369,6 +390,12 @@
             }
 
             #status {
+                background: #1c1c1e;
+                color: #d1d1d6;
+            }
+
+            #file-structure {
+                border-color: #38383a;
                 background: #1c1c1e;
                 color: #d1d1d6;
             }
@@ -536,6 +563,15 @@
 
 
     <!-- ==================================================
+         GENERATED FILE STRUCTURE (for debugging without
+         Web Inspector - shows the actual MP4 box layout
+         of whatever was generated, success or failure)
+         ================================================== -->
+
+    <pre id="file-structure"></pre>
+
+
+    <!-- ==================================================
          AUDIO CAPABILITY TEST
          ================================================== -->
 
@@ -687,6 +723,9 @@ const progressFill =
 
 const progressText =
     document.getElementById("progress-text");
+
+const fileStructure =
+    document.getElementById("file-structure");
 
 const generateButton =
     document.getElementById("generate");
@@ -1325,6 +1364,195 @@ function testAudioCapabilities() {
    backend, no build step, still just static files via GitHub
    Pages) and only when this path is actually used.
    ======================================================== */
+
+/* ========================================================
+   MP4 STRUCTURE INSPECTOR
+   --------------------------------------------------------
+   Walks the top-level ISO-BMFF boxes of a generated file
+   (ftyp/moov/mdat/etc, recursing into known container boxes)
+   and renders a plain-text tree. This exists specifically so
+   we can see whether a generated file is structurally sane
+   WITHOUT Web Inspector, per the original requirement - if
+   Safari rejects a file outright, this is the only way to
+   see why on-device.
+   ======================================================== */
+
+const MP4_CONTAINER_BOX_TYPES =
+    new Set([
+        "moov", "trak", "mdia", "minf",
+        "stbl", "udta", "edts", "mvex",
+        "moof", "traf", "mfra"
+    ]);
+
+
+function readTopLevelBoxes(view, start, end) {
+
+    const boxes = [];
+
+    let offset = start;
+
+
+    while (offset + 8 <= end) {
+
+        let size =
+            view.getUint32(offset, false);
+
+        const type =
+            String.fromCharCode(
+                view.getUint8(offset + 4),
+                view.getUint8(offset + 5),
+                view.getUint8(offset + 6),
+                view.getUint8(offset + 7)
+            );
+
+        let headerSize = 8;
+
+
+        if (size === 1) {
+
+            /* 64-bit extended size follows the type. */
+
+            if (offset + 16 > end) {
+                break;
+            }
+
+            const high =
+                view.getUint32(offset + 8, false);
+
+            const low =
+                view.getUint32(offset + 12, false);
+
+            size =
+                high * 4294967296 + low;
+
+            headerSize = 16;
+
+        } else if (size === 0) {
+
+            /* Box extends to the end of its parent. */
+
+            size = end - offset;
+        }
+
+
+        if (size < headerSize || offset + size > end + 8) {
+
+            boxes.push({
+                type,
+                size,
+                start: offset,
+                headerSize,
+                malformed: true
+            });
+
+            break;
+        }
+
+
+        boxes.push({
+            type,
+            size,
+            start: offset,
+            headerSize,
+            malformed: false
+        });
+
+
+        offset += size;
+    }
+
+
+    return boxes;
+}
+
+
+function describeBoxes(view, start, end, depth) {
+
+    const boxes =
+        readTopLevelBoxes(view, start, end);
+
+    let lines = [];
+
+
+    for (const box of boxes) {
+
+        const indent =
+            "  ".repeat(depth);
+
+        if (box.malformed) {
+
+            lines.push(
+                `${indent}${box.type} ` +
+                `(malformed box header near byte ${box.start})`
+            );
+
+            continue;
+        }
+
+
+        lines.push(
+            `${indent}${box.type}  (${box.size} bytes, ` +
+            `offset ${box.start})`
+        );
+
+
+        if (MP4_CONTAINER_BOX_TYPES.has(box.type)) {
+
+            lines = lines.concat(
+                describeBoxes(
+                    view,
+                    box.start + box.headerSize,
+                    box.start + box.size,
+                    depth + 1
+                )
+            );
+        }
+    }
+
+
+    return lines;
+}
+
+
+async function describeMp4Structure(blob) {
+
+    const buffer =
+        await blob.arrayBuffer();
+
+    const view =
+        new DataView(buffer);
+
+    const lines =
+        describeBoxes(
+            view,
+            0,
+            buffer.byteLength,
+            0
+        );
+
+    if (lines.length === 0) {
+
+        return (
+            `File is ${buffer.byteLength} bytes but contains ` +
+            `no recognizable top-level MP4 boxes at all.`
+        );
+    }
+
+
+    return (
+        `File size: ${buffer.byteLength} bytes\n\n` +
+        lines.join("\n")
+    );
+}
+
+
+function showFileStructure(text) {
+
+    fileStructure.textContent = text;
+
+    fileStructure.style.display = "block";
+}
+
 
 function downmixToMono(audioBuffer) {
 
@@ -2321,6 +2549,8 @@ function invalidateGeneratedAlarm() {
 
     startButton.disabled = true;
 
+    fileStructure.style.display = "none";
+
     if (!alarmRunning) {
 
         status.textContent =
@@ -2507,6 +2737,29 @@ generateButton.addEventListener(
 
                 methodLabel =
                     "real-time recorder fallback";
+            }
+
+
+            /*
+             * Show the file's actual box structure regardless of
+             * what happens next - this is the main diagnostic tool
+             * available without Web Inspector.
+             */
+            try {
+
+                const structureText =
+                    await describeMp4Structure(blob);
+
+                showFileStructure(
+                    structureText
+                );
+
+            } catch (inspectError) {
+
+                showFileStructure(
+                    "Could not inspect file: " +
+                    inspectError.message
+                );
             }
 
 
