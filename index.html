@@ -1523,17 +1523,18 @@ async function generateFastAlarm() {
             },
 
             /*
-             * "in-memory" keeps every encoded chunk buffered
-             * separately (on top of the final assembled file)
-             * so it can rewrite the header with correct offsets
-             * before the data. `false` writes sample data out
-             * as it arrives and puts the metadata at the end
-             * instead - this doesn't matter for playback here,
-             * since the whole file is loaded as one local Blob
-             * anyway rather than streamed over a network, but it
-             * meaningfully cuts peak memory during generation.
+             * The backpressure fix in the silence loop below is
+             * what actually solved the crash (it caps in-flight
+             * raw PCM, which was the real problem). That means
+             * this can go back to the library's default, better-
+             * tested 'in-memory' mode rather than the less common
+             * `false` mode - which is a plausible source of the
+             * "Safari could not decode this file" failure. The
+             * memory cost of 'in-memory' here is just the final
+             * encoded AAC data (small at 48 kbps) plus one rewrite
+             * pass, not the raw-PCM blowup that caused the crash.
              */
-            fastStart: false
+            fastStart: "in-memory"
 
         });
 
@@ -1706,7 +1707,18 @@ async function generateFastAlarm() {
 
         encoder.encode(audioData);
 
-        audioData.close();
+        /*
+         * Deliberately NOT calling audioData.close() here.
+         * Per spec, encode() should have already cloned the
+         * data by the time it returns, so closing immediately
+         * is meant to be safe - but Safari's WebCodecs support
+         * is brand new (Safari 26), and closing right after
+         * encode() is the prime suspect for a "Safari could not
+         * decode this file" failure seen on-device. Backpressure
+         * above already keeps at most a handful of these alive
+         * at once, so leaving them for normal garbage collection
+         * instead costs very little.
+         */
 
 
         framesEncoded += framesThisChunk;
@@ -1784,7 +1796,7 @@ async function generateFastAlarm() {
 
     encoder.encode(alarmAudioData);
 
-    alarmAudioData.close();
+    /* Same reasoning as the silence loop - no immediate close(). */
 
 
     status.textContent =
@@ -2547,8 +2559,21 @@ generateButton.addEventListener(
             invalidateGeneratedAlarm();
 
 
-            status.textContent =
+            let details =
                 "Generation failed: " + error.message;
+
+            if (blob) {
+
+                const sizeMB =
+                    blob.size / (1024 * 1024);
+
+                details +=
+                    ` [${methodLabel || "unknown method"}, ` +
+                    `${sizeMB.toFixed(2)} MB, ${blob.type}]`;
+            }
+
+            status.textContent =
+                details;
 
 
         } finally {
