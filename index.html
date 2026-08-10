@@ -666,7 +666,7 @@
 
 
     <div style="text-align:center;color:#8e8e93;font-size:11px;margin-top:28px;">
-        Build marker: mp4-structure-inspector-3-deep
+        Build marker: esds-single-config-fix-4
     </div>
 
 </main>
@@ -2151,15 +2151,55 @@ async function generateFastAlarm() {
 
     let encodeError = null;
 
+    /*
+     * IMPORTANT - this is the fix for "Safari could not decode
+     * this file (code 4)".
+     *
+     * Byte-level inspection of a generated file's esds box (via
+     * the structure panel) showed the AAC decoder config nested
+     * TWICE - a whole second ES_Descriptor/DecoderConfigDescriptor
+     * tree wrapped inside where only the raw 2-byte
+     * AudioSpecificConfig should be. The real config was in there
+     * (found it, matched by hand against the spec), just buried
+     * inside a spurious duplicate layer that shouldn't exist -
+     * exactly the kind of malformed structure Safari's strict
+     * AVFoundation-based decoder rejects outright, even though a
+     * more lenient parser might tolerate it.
+     *
+     * Best explanation: Safari's WebCodecs implementation appears
+     * to resupply `meta.decoderConfig` on every encoded chunk, not
+     * just the first one. mp4-muxer (unmaintained, so this kind of
+     * edge case was likely never hardened against) doesn't seem to
+     * handle being handed that config more than once cleanly - it
+     * wraps it again instead of just using it once. Forwarding the
+     * config to the muxer only the first time avoids that entirely.
+     */
+    let decoderConfigProvided = false;
+
     const encoder =
         new AudioEncoder({
 
             output: (chunk, meta) => {
 
-                muxer.addAudioChunk(
-                    chunk,
-                    meta
-                );
+                if (
+                    decoderConfigProvided ||
+                    !meta ||
+                    !meta.decoderConfig
+                ) {
+
+                    muxer.addAudioChunk(
+                        chunk
+                    );
+
+                } else {
+
+                    muxer.addAudioChunk(
+                        chunk,
+                        meta
+                    );
+
+                    decoderConfigProvided = true;
+                }
             },
 
             error: error => {
