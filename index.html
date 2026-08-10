@@ -666,7 +666,7 @@
 
 
     <div style="text-align:center;color:#8e8e93;font-size:11px;margin-top:28px;">
-        Build marker: mp4-structure-inspector-2
+        Build marker: mp4-structure-inspector-3-deep
     </div>
 
 </main>
@@ -1521,6 +1521,361 @@ function describeBoxes(view, start, end, depth) {
 }
 
 
+function findChildBox(view, start, end, type) {
+
+    const boxes =
+        readTopLevelBoxes(view, start, end);
+
+    return (
+        boxes.find(box => box.type === type) ||
+        null
+    );
+}
+
+
+function findDescendantBox(view, start, end, path) {
+
+    let currentStart = start;
+    let currentEnd = end;
+    let box = null;
+
+
+    for (const type of path) {
+
+        box =
+            findChildBox(
+                view,
+                currentStart,
+                currentEnd,
+                type
+            );
+
+        if (!box || box.malformed) {
+            return null;
+        }
+
+        currentStart =
+            box.start + box.headerSize;
+
+        currentEnd =
+            box.start + box.size;
+    }
+
+
+    return box;
+}
+
+
+function readFixed16_16(view, offset) {
+
+    return (
+        view.getUint16(offset, false) +
+        view.getUint16(offset + 2, false) / 65536
+    );
+}
+
+
+function deepInspectAudioTrack(view, totalLength) {
+
+    const lines = [];
+
+
+    const mdatBox =
+        findChildBox(view, 0, totalLength, "mdat");
+
+    if (!mdatBox) {
+
+        lines.push(
+            "No mdat box found at all - there is no audio data " +
+            "in this file."
+        );
+
+        return lines;
+    }
+
+
+    const mdatPayloadStart =
+        mdatBox.start + mdatBox.headerSize;
+
+    const mdatPayloadEnd =
+        mdatBox.start + mdatBox.size;
+
+    const mdatPayloadSize =
+        mdatPayloadEnd - mdatPayloadStart;
+
+
+    lines.push(
+        `mdat payload: ${mdatPayloadSize} bytes ` +
+        `(bytes ${mdatPayloadStart} to ${mdatPayloadEnd})`
+    );
+
+
+    /*
+     * stsz - does the sum of declared sample sizes actually
+     * match how much audio data mdat contains?
+     */
+    const stszBox =
+        findDescendantBox(
+            view, 0, totalLength,
+            ["moov", "trak", "mdia", "minf", "stbl", "stsz"]
+        );
+
+    if (stszBox) {
+
+        const body =
+            stszBox.start + stszBox.headerSize;
+
+        const uniformSampleSize =
+            view.getUint32(body + 4, false);
+
+        const sampleCount =
+            view.getUint32(body + 8, false);
+
+        let totalSampleBytes = 0;
+
+
+        if (uniformSampleSize === 0) {
+
+            let entryOffset = body + 12;
+
+            for (let i = 0; i < sampleCount; i++) {
+
+                totalSampleBytes +=
+                    view.getUint32(entryOffset, false);
+
+                entryOffset += 4;
+            }
+
+        } else {
+
+            totalSampleBytes =
+                uniformSampleSize * sampleCount;
+        }
+
+
+        lines.push(
+            `stsz: sample_count = ${sampleCount}, ` +
+            `sum of sample sizes = ${totalSampleBytes} bytes`
+        );
+
+        lines.push(
+            totalSampleBytes === mdatPayloadSize
+                ? "  -> matches mdat payload size (consistent)"
+                : `  -> MISMATCH: mdat payload is ` +
+                  `${mdatPayloadSize} bytes, difference of ` +
+                  `${mdatPayloadSize - totalSampleBytes} bytes`
+        );
+
+    } else {
+
+        lines.push(
+            "Could not find/parse stsz box."
+        );
+    }
+
+
+    /*
+     * stco - do the chunk offsets actually point inside mdat?
+     */
+    const stcoBox =
+        findDescendantBox(
+            view, 0, totalLength,
+            ["moov", "trak", "mdia", "minf", "stbl", "stco"]
+        );
+
+    if (stcoBox) {
+
+        const body =
+            stcoBox.start + stcoBox.headerSize;
+
+        const entryCount =
+            view.getUint32(body + 4, false);
+
+        const firstOffset =
+            entryCount > 0
+                ? view.getUint32(body + 8, false)
+                : null;
+
+        const lastOffset =
+            entryCount > 0
+                ? view.getUint32(
+                    body + 8 + (entryCount - 1) * 4,
+                    false
+                  )
+                : null;
+
+        lines.push(
+            `stco: ${entryCount} chunk offsets, ` +
+            `first = ${firstOffset}, last = ${lastOffset}`
+        );
+
+        if (firstOffset !== null) {
+
+            const inRange =
+                firstOffset >= mdatPayloadStart &&
+                lastOffset < mdatPayloadEnd;
+
+            lines.push(
+                inRange
+                    ? "  -> offsets fall inside mdat (consistent)"
+                    : `  -> MISMATCH: mdat data is ` +
+                      `${mdatPayloadStart}-${mdatPayloadEnd}, ` +
+                      `chunk offsets fall outside that range`
+            );
+        }
+
+    } else {
+
+        lines.push(
+            "Could not find/parse stco box " +
+            "(large files may use co64 instead - not checked here)."
+        );
+    }
+
+
+    /*
+     * stsd -> the audio sample entry (e.g. mp4a) -> esds ->
+     * raw AudioSpecificConfig bytes. This is the actual codec
+     * configuration a decoder relies on - if anything here is
+     * wrong, Safari will reject the file exactly the way it has
+     * been, regardless of how correct the surrounding container
+     * boxes are.
+     */
+    const stsdBox =
+        findDescendantBox(
+            view, 0, totalLength,
+            ["moov", "trak", "mdia", "minf", "stbl", "stsd"]
+        );
+
+    if (stsdBox) {
+
+        const body =
+            stsdBox.start + stsdBox.headerSize;
+
+        const entryCount =
+            view.getUint32(body + 4, false);
+
+        lines.push(
+            `stsd: ${entryCount} sample entry/entries`
+        );
+
+
+        const entryStart = body + 8;
+
+        const entrySize =
+            view.getUint32(entryStart, false);
+
+        const entryType =
+            String.fromCharCode(
+                view.getUint8(entryStart + 4),
+                view.getUint8(entryStart + 5),
+                view.getUint8(entryStart + 6),
+                view.getUint8(entryStart + 7)
+            );
+
+        lines.push(
+            `stsd entry: type = '${entryType}', ` +
+            `size = ${entrySize} bytes`
+        );
+
+
+        if (entryType === "mp4a" || entryType === "aac ") {
+
+            /*
+             * AudioSampleEntry layout (ISO/IEC 14496-12 8.16.3):
+             * SampleEntry base: reserved(6) + data_reference_index(2) = 8
+             * then: reserved(8) + channelcount(2) + samplesize(2) +
+             *       pre_defined(2) + reserved(2) + samplerate(4) = 20
+             * = 28 bytes total before any child boxes (like esds).
+             */
+            const sampleEntryBody =
+                entryStart + 8;
+
+            const channelCount =
+                view.getUint16(sampleEntryBody + 16, false);
+
+            const sampleSizeBits =
+                view.getUint16(sampleEntryBody + 18, false);
+
+            const sampleRate =
+                readFixed16_16(
+                    view,
+                    sampleEntryBody + 24
+                );
+
+            lines.push(
+                `mp4a fixed fields: channel_count = ${channelCount}, ` +
+                `sample_size = ${sampleSizeBits} bits, ` +
+                `sample_rate = ${sampleRate} Hz`
+            );
+
+
+            const esdsSearchStart =
+                sampleEntryBody + 28;
+
+            const esdsSearchEnd =
+                entryStart + entrySize;
+
+            const esdsBox =
+                findChildBox(
+                    view,
+                    esdsSearchStart,
+                    esdsSearchEnd,
+                    "esds"
+                );
+
+            if (esdsBox) {
+
+                const esdsBytes = [];
+
+                for (
+                    let i = esdsBox.start + esdsBox.headerSize;
+                    i < esdsBox.start + esdsBox.size;
+                    i++
+                ) {
+
+                    esdsBytes.push(
+                        view.getUint8(i)
+                            .toString(16)
+                            .padStart(2, "0")
+                    );
+                }
+
+                lines.push(
+                    `esds: ${esdsBox.size} bytes, raw content = ` +
+                    esdsBytes.join(" ")
+                );
+
+            } else {
+
+                lines.push(
+                    "No esds box found inside the mp4a sample " +
+                    "entry - AAC needs this to carry its " +
+                    "AudioSpecificConfig. If this is missing, " +
+                    "that is very likely the whole problem."
+                );
+            }
+
+        } else {
+
+            lines.push(
+                `Sample entry type is '${entryType}', not 'mp4a' - ` +
+                `unexpected for an AAC audio track.`
+            );
+        }
+
+    } else {
+
+        lines.push(
+            "Could not find/parse stsd box."
+        );
+    }
+
+
+    return lines;
+}
+
+
 async function describeMp4Structure(blob) {
 
     const buffer =
@@ -1546,9 +1901,29 @@ async function describeMp4Structure(blob) {
     }
 
 
+    let deepLines = [];
+
+    try {
+
+        deepLines =
+            deepInspectAudioTrack(
+                view,
+                buffer.byteLength
+            );
+
+    } catch (error) {
+
+        deepLines = [
+            "Deep inspection failed: " + error.message
+        ];
+    }
+
+
     return (
         `File size: ${buffer.byteLength} bytes\n\n` +
-        lines.join("\n")
+        lines.join("\n") +
+        `\n\n--- Field-level checks ---\n\n` +
+        deepLines.join("\n")
     );
 }
 
