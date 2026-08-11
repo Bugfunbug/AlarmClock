@@ -13,6 +13,7 @@
     <style>
         * {
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         :root {
@@ -39,68 +40,196 @@
 
         .container {
             width: 100%;
-            max-width: 540px;
+            max-width: 480px;
             margin: 0 auto;
         }
 
         h1 {
-            margin: 20px 0 8px;
+            margin: 20px 0 4px;
 
-            font-size: 32px;
+            font-size: 30px;
             letter-spacing: -0.5px;
+            text-align: center;
         }
 
         .subtitle {
-            margin: 0 0 28px;
+            margin: 0 0 24px;
 
             color: #6e6e73;
 
-            line-height: 1.5;
+            font-size: 14px;
+            line-height: 1.4;
+            text-align: center;
         }
 
         .section {
-            margin-bottom: 24px;
+            margin-bottom: 22px;
         }
 
         .section-title {
             margin-bottom: 10px;
 
-            font-size: 17px;
+            font-size: 15px;
             font-weight: 600;
+            color: #6e6e73;
+
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
 
-        .duration {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 10px;
-        }
-
-        .duration-field {
-            text-align: center;
-        }
-
-        .duration-field input {
-            width: 100%;
-            padding: 14px 8px;
-
-            border: 1px solid #d1d1d6;
-            border-radius: 12px;
-
-            background: white;
-            color: inherit;
-
-            font-size: 22px;
-            text-align: center;
-        }
-
-        .duration-field span {
-            display: block;
-            margin-top: 6px;
+        .hint {
+            margin: -4px 0 12px;
 
             color: #6e6e73;
 
             font-size: 13px;
+            line-height: 1.4;
         }
+
+        /* ===== Tab switcher ===== */
+
+        .tabs {
+            display: flex;
+            gap: 2px;
+
+            margin-bottom: 22px;
+            padding: 3px;
+
+            border-radius: 12px;
+
+            background: #e5e5ea;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 9px 0;
+
+            border: 0;
+            border-radius: 10px;
+
+            background: transparent;
+            color: #1c1c1e;
+
+            font-size: 14px;
+            font-weight: 600;
+
+            cursor: pointer;
+        }
+
+        .tab-button.active {
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* ===== Wheel time picker ===== */
+
+        .wheel-row {
+            padding: 8px 12px;
+
+            border: 1px solid #d1d1d6;
+            border-radius: 16px;
+
+            background: white;
+        }
+
+        .wheel-track-row {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+
+            height: 200px;
+        }
+
+        .wheel-col {
+            flex: 1;
+        }
+
+        .wheel-labels {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+
+            margin-top: 4px;
+        }
+
+        .wheel-labels span {
+            flex: 1;
+
+            text-align: center;
+
+            color: #6e6e73;
+
+            font-size: 12px;
+        }
+
+        .wheel {
+            width: 100%;
+            height: 200px;
+
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+
+            -webkit-mask-image: linear-gradient(
+                to bottom,
+                transparent 0,
+                black 70px,
+                black 130px,
+                transparent 200px
+            );
+            mask-image: linear-gradient(
+                to bottom,
+                transparent 0,
+                black 70px,
+                black 130px,
+                transparent 200px
+            );
+        }
+
+        .wheel::-webkit-scrollbar {
+            display: none;
+        }
+
+        .wheel-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            height: 40px;
+
+            scroll-snap-align: center;
+
+            font-size: 26px;
+            font-variant-numeric: tabular-nums;
+            color: #1c1c1e;
+        }
+
+        .wheel-highlight {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+
+            height: 40px;
+            transform: translateY(-50%);
+
+            border-top: 1px solid #d1d1d6;
+            border-bottom: 1px solid #d1d1d6;
+
+            pointer-events: none;
+        }
+
+        /* ===== Sound list ===== */
 
         .sound-list {
             display: flex;
@@ -128,12 +257,10 @@
             box-shadow: 0 0 0 1px #007aff;
         }
 
-        .sound-info {
+        .sound-name {
             flex: 1;
             min-width: 0;
-        }
 
-        .sound-name {
             overflow: hidden;
 
             font-size: 16px;
@@ -143,28 +270,10 @@
             white-space: nowrap;
         }
 
-        .sound-file {
-            margin-top: 3px;
-
-            color: #8e8e93;
-
-            font-size: 12px;
-
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .preview-controls {
-            display: flex;
-            gap: 6px;
-
-            flex-shrink: 0;
-        }
-
         .preview {
-            width: 42px;
-            height: 42px;
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
 
             border: 0;
             border-radius: 50%;
@@ -172,7 +281,7 @@
             background: #e5e5ea;
             color: #1c1c1e;
 
-            font-size: 16px;
+            font-size: 15px;
 
             cursor: pointer;
         }
@@ -184,7 +293,6 @@
         .radio {
             width: 20px;
             height: 20px;
-
             flex-shrink: 0;
 
             border: 2px solid #8e8e93;
@@ -194,6 +302,92 @@
         .sound.selected .radio {
             border: 6px solid #007aff;
         }
+
+        /* ===== Extra alarm entries ===== */
+
+        .extra-entry {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+
+            margin-bottom: 8px;
+            padding: 10px 12px;
+
+            border: 1px solid #d1d1d6;
+            border-radius: 12px;
+
+            background: white;
+
+            font-size: 14px;
+        }
+
+        .extra-entry input[type="number"] {
+            width: 46px;
+            padding: 6px 4px;
+
+            border: 1px solid #d1d1d6;
+            border-radius: 8px;
+
+            background: white;
+            color: inherit;
+
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .extra-entry select {
+            flex: 1;
+            min-width: 110px;
+            padding: 6px 8px;
+
+            border: 1px solid #d1d1d6;
+            border-radius: 8px;
+
+            background: white;
+            color: inherit;
+
+            font-size: 14px;
+        }
+
+        .extra-entry .remove-entry {
+            width: 26px;
+            height: 26px;
+            flex-shrink: 0;
+
+            border: 0;
+            border-radius: 50%;
+
+            background: #ff3b30;
+            color: white;
+
+            font-size: 13px;
+            line-height: 1;
+
+            cursor: pointer;
+        }
+
+        #add-alarm {
+            width: 100%;
+            padding: 12px;
+
+            border: 1px dashed #8e8e93;
+            border-radius: 13px;
+
+            background: transparent;
+            color: #007aff;
+
+            font-size: 15px;
+            font-weight: 600;
+
+            cursor: pointer;
+        }
+
+        #add-alarm:disabled {
+            opacity: 0.4;
+        }
+
+        /* ===== Action controls ===== */
 
         .controls {
             display: grid;
@@ -210,14 +404,18 @@
 
             color: white;
 
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 600;
 
             cursor: pointer;
         }
 
-        #start {
+        #action-button {
             background: #007aff;
+        }
+
+        #action-button.ready {
+            background: #34c759;
         }
 
         #stop {
@@ -234,8 +432,8 @@
         }
 
         #status {
-            margin-top: 16px;
-            padding: 14px;
+            margin-top: 14px;
+            padding: 13px 14px;
 
             border-radius: 12px;
 
@@ -243,13 +441,14 @@
 
             color: #3a3a3c;
 
+            font-size: 14px;
             line-height: 1.4;
         }
 
         #progress {
             display: none;
 
-            margin-top: 16px;
+            margin-top: 14px;
         }
 
         #progress-bar {
@@ -283,170 +482,6 @@
             text-align: center;
         }
 
-        #file-structure {
-            display: none;
-            margin-top: 16px;
-            padding: 12px;
-
-            max-height: 260px;
-            overflow: auto;
-
-            border: 1px solid #d1d1d6;
-            border-radius: 12px;
-
-            background: white;
-            color: #3a3a3c;
-
-            font-family: ui-monospace, "SF Mono", Menlo, monospace;
-            font-size: 12px;
-            line-height: 1.5;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-
-        .diagnostics {
-            padding: 14px;
-
-            border: 1px solid #d1d1d6;
-            border-radius: 14px;
-
-            background: white;
-        }
-
-        .diagnostic {
-            display: flex;
-            justify-content: space-between;
-
-            padding: 7px 0;
-
-            border-bottom: 1px solid #e5e5ea;
-
-            font-size: 14px;
-        }
-
-        .diagnostic:last-child {
-            border-bottom: 0;
-        }
-
-        .diagnostic-value {
-            font-weight: 600;
-        }
-
-        .yes {
-            color: #34c759;
-        }
-
-        .no {
-            color: #ff3b30;
-        }
-
-        .unknown {
-            color: #ff9500;
-        }
-
-        #generate {
-            width: 100%;
-            margin-top: 12px;
-            padding: 13px;
-
-            border: 0;
-            border-radius: 13px;
-
-            background: #e5e5ea;
-            color: inherit;
-
-            font-size: 16px;
-            font-weight: 600;
-
-            cursor: pointer;
-        }
-
-        #generate:disabled {
-            opacity: 0.4;
-        }
-
-        .extra-entry {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 8px;
-
-            margin-bottom: 8px;
-            padding: 10px 12px;
-
-            border: 1px solid #d1d1d6;
-            border-radius: 12px;
-
-            background: white;
-
-            font-size: 14px;
-        }
-
-        .extra-entry input[type="number"] {
-            width: 48px;
-            padding: 6px 4px;
-
-            border: 1px solid #d1d1d6;
-            border-radius: 8px;
-
-            background: white;
-            color: inherit;
-
-            font-size: 14px;
-            text-align: center;
-        }
-
-        .extra-entry select {
-            flex: 1;
-            min-width: 120px;
-            padding: 6px 8px;
-
-            border: 1px solid #d1d1d6;
-            border-radius: 8px;
-
-            background: white;
-            color: inherit;
-
-            font-size: 14px;
-        }
-
-        .extra-entry .remove-entry {
-            width: 28px;
-            height: 28px;
-            flex-shrink: 0;
-
-            border: 0;
-            border-radius: 50%;
-
-            background: #ff3b30;
-            color: white;
-
-            font-size: 14px;
-            line-height: 1;
-
-            cursor: pointer;
-        }
-
-        #add-alarm {
-            width: 100%;
-            padding: 12px;
-
-            border: 1px dashed #8e8e93;
-            border-radius: 13px;
-
-            background: transparent;
-            color: #007aff;
-
-            font-size: 15px;
-            font-weight: 600;
-
-            cursor: pointer;
-        }
-
-        #add-alarm:disabled {
-            opacity: 0.4;
-        }
-
         #player {
             display: none;
         }
@@ -458,11 +493,46 @@
                 color: #f2f2f7;
             }
 
-            .duration-field input,
+            .subtitle,
+            .section-title,
+            .hint,
+            .wheel-labels span,
+            #progress-text {
+                color: #98989d;
+            }
+
+            .tabs {
+                background: #1c1c1e;
+            }
+
+            .tab-button {
+                color: #f2f2f7;
+            }
+
+            .tab-button.active {
+                background: #38383a;
+            }
+
+            .wheel-row,
             .sound,
-            .diagnostics {
+            .extra-entry {
                 border-color: #38383a;
                 background: #1c1c1e;
+                color: #f2f2f7;
+            }
+
+            .wheel-item {
+                color: #f2f2f7;
+            }
+
+            .wheel-highlight {
+                border-color: #48484a;
+            }
+
+            .extra-entry input[type="number"],
+            .extra-entry select {
+                border-color: #48484a;
+                background: #2c2c2e;
                 color: #f2f2f7;
             }
 
@@ -474,33 +544,6 @@
             #status {
                 background: #1c1c1e;
                 color: #d1d1d6;
-            }
-
-            #file-structure {
-                border-color: #38383a;
-                background: #1c1c1e;
-                color: #d1d1d6;
-            }
-
-            .diagnostic {
-                border-color: #38383a;
-            }
-
-            #generate {
-                background: #38383a;
-            }
-
-            .extra-entry {
-                border-color: #38383a;
-                background: #1c1c1e;
-                color: #f2f2f7;
-            }
-
-            .extra-entry input[type="number"],
-            .extra-entry select {
-                border-color: #38383a;
-                background: #1c1c1e;
-                color: #f2f2f7;
             }
 
             #progress-bar {
@@ -522,279 +565,168 @@
 
 
     <!-- ==================================================
-         DURATION
+         TABS
          ================================================== -->
 
-    <section class="section">
-
-        <div class="section-title">
-            Silence duration
-        </div>
-
-        <div class="duration">
-
-            <div class="duration-field">
-
-                <input
-                    id="hours"
-                    type="number"
-                    min="0"
-                    max="99"
-                    value="0"
-                    inputmode="numeric"
-                >
-
-                <span>Hours</span>
-
-            </div>
-
-
-            <div class="duration-field">
-
-                <input
-                    id="minutes"
-                    type="number"
-                    min="0"
-                    max="59"
-                    value="5"
-                    inputmode="numeric"
-                >
-
-                <span>Minutes</span>
-
-            </div>
-
-
-            <div class="duration-field">
-
-                <input
-                    id="seconds"
-                    type="number"
-                    min="0"
-                    max="59"
-                    value="0"
-                    inputmode="numeric"
-                >
-
-                <span>Seconds</span>
-
-            </div>
-
-        </div>
-
-    </section>
-
-
-    <!-- ==================================================
-         SOUNDS
-         ================================================== -->
-
-    <section class="section">
-
-        <div class="section-title">
-            Alarm sound
-        </div>
-
-        <div
-            id="sound-list"
-            class="sound-list"
-        ></div>
-
-    </section>
-
-
-    <!-- ==================================================
-         ADDITIONAL ALARM SOUNDS (item 7)
-         --------------------------------------------------
-         Deliberately minimal styling for now - a full UI
-         pass is planned separately. Functionally: each row
-         is "wait this long after the previous alarm ends,
-         then play this sound".
-         ================================================== -->
-
-    <section class="section">
-
-        <div class="section-title">
-            Additional alarm sounds (optional)
-        </div>
-
-        <div id="extra-entries"></div>
+    <div class="tabs">
 
         <button
-            id="add-alarm"
+            class="tab-button active"
+            data-tab="alarm"
             type="button"
         >
-            + Add another alarm sound
+            Alarm
         </button>
 
-    </section>
-
-
-    <!-- ==================================================
-         ALARM CONTROLS
-         ================================================== -->
-
-    <section class="section">
-
-        <div class="controls">
-
-            <button
-                id="start"
-                class="main-button"
-                disabled
-            >
-                Start Alarm
-            </button>
-
-
-            <button
-                id="stop"
-                class="main-button"
-                disabled
-            >
-                Stop
-            </button>
-
-        </div>
-
-    </section>
-
-
-    <!-- ==================================================
-         STATUS
-         ================================================== -->
-
-    <div id="status">
-        Ready. Generate an alarm file below before starting.
-    </div>
-
-
-    <div id="progress">
-
-        <div id="progress-bar">
-
-            <div id="progress-fill"></div>
-
-        </div>
-
-        <div id="progress-text">
-            00:00:00 / 00:00:00
-        </div>
+        <button
+            class="tab-button"
+            data-tab="more"
+            type="button"
+        >
+            More Sounds
+        </button>
 
     </div>
 
 
     <!-- ==================================================
-         GENERATED FILE STRUCTURE (for debugging without
-         Web Inspector - shows the actual MP4 box layout
-         of whatever was generated, success or failure)
+         TAB: ALARM
          ================================================== -->
 
-    <pre id="file-structure"></pre>
+    <div id="tab-alarm" class="tab-panel active">
+
+        <section class="section">
+
+            <div class="section-title">
+                Silence duration
+            </div>
+
+            <div class="wheel-row">
+
+                <div class="wheel-track-row">
+
+                    <div class="wheel-col">
+                        <div id="wheel-hours" class="wheel"></div>
+                    </div>
+
+                    <div class="wheel-col">
+                        <div id="wheel-minutes" class="wheel"></div>
+                    </div>
+
+                    <div class="wheel-col">
+                        <div id="wheel-seconds" class="wheel"></div>
+                    </div>
+
+                    <div class="wheel-highlight"></div>
+
+                </div>
+
+                <div class="wheel-labels">
+                    <span>hours</span>
+                    <span>min</span>
+                    <span>sec</span>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <section class="section">
+
+            <div class="section-title">
+                Alarm sound
+            </div>
+
+            <div
+                id="sound-list"
+                class="sound-list"
+            ></div>
+
+        </section>
+
+
+        <section class="section">
+
+            <div class="controls">
+
+                <button
+                    id="action-button"
+                    class="main-button"
+                    disabled
+                >
+                    Start Alarm
+                </button>
+
+                <button
+                    id="stop"
+                    class="main-button"
+                    disabled
+                >
+                    Stop
+                </button>
+
+            </div>
+
+            <div id="status">
+                Ready.
+            </div>
+
+            <div id="progress">
+
+                <div id="progress-bar">
+                    <div id="progress-fill"></div>
+                </div>
+
+                <div id="progress-text">
+                    00:00:00 / 00:00:00
+                </div>
+
+            </div>
+
+        </section>
+
+    </div>
 
 
     <!-- ==================================================
-         AUDIO CAPABILITY TEST
+         TAB: MORE SOUNDS (item 7)
          ================================================== -->
 
-    <section class="section">
+    <div id="tab-more" class="tab-panel">
 
-        <div class="section-title">
-            Audio system
-        </div>
+        <section class="section">
 
-
-        <div class="diagnostics">
-
-            <div class="diagnostic">
-                <span>AudioEncoder</span>
-                <span
-                    id="test-audio-encoder"
-                    class="diagnostic-value"
-                >
-                    Testing...
-                </span>
+            <div class="section-title">
+                Additional alarm sounds
             </div>
 
+            <p class="hint">
+                These play in order after the main alarm above, each
+                its own delay after the previous one ends.
+            </p>
 
-            <div class="diagnostic">
-                <span>AudioDecoder</span>
-                <span
-                    id="test-audio-decoder"
-                    class="diagnostic-value"
-                >
-                    Testing...
-                </span>
-            </div>
-
-
-            <div class="diagnostic">
-                <span>MediaRecorder</span>
-                <span
-                    id="test-media-recorder"
-                    class="diagnostic-value"
-                >
-                    Testing...
-                </span>
-            </div>
-
-
-            <div class="diagnostic">
-                <span>MediaSource</span>
-                <span
-                    id="test-media-source"
-                    class="diagnostic-value"
-                >
-                    Testing...
-                </span>
-            </div>
-
-
-            <div class="diagnostic">
-                <span>AAC recording</span>
-                <span
-                    id="test-aac"
-                    class="diagnostic-value"
-                >
-                    Testing...
-                </span>
-            </div>
-
-
-            <div class="diagnostic">
-                <span>MP4 recording</span>
-                <span
-                    id="test-mp4"
-                    class="diagnostic-value"
-                >
-                    Testing...
-                </span>
-            </div>
-
+            <div id="extra-entries"></div>
 
             <button
-                id="generate"
-                disabled
+                id="add-alarm"
+                type="button"
             >
-                Generate &amp; Verify Alarm File
+                + Add another alarm sound
             </button>
 
-        </div>
+        </section>
 
-    </section>
+    </div>
 
 
     <audio id="player" playsinline></audio>
 
-
-    <div style="text-align:center;color:#8e8e93;font-size:11px;margin-top:28px;">
-        Build marker: multi-alarm-sequence-6
-    </div>
-
 </main>
 
-
 <script>
+
+
 
 /* ========================================================
    SOUND FILES
@@ -818,20 +750,17 @@ const soundFiles = [
    DOM
    ======================================================== */
 
-const hoursInput =
-    document.getElementById("hours");
-
-const minutesInput =
-    document.getElementById("minutes");
-
-const secondsInput =
-    document.getElementById("seconds");
-
 const soundList =
     document.getElementById("sound-list");
 
-const startButton =
-    document.getElementById("start");
+const extraEntriesContainer =
+    document.getElementById("extra-entries");
+
+const addAlarmButton =
+    document.getElementById("add-alarm");
+
+const actionButton =
+    document.getElementById("action-button");
 
 const stopButton =
     document.getElementById("stop");
@@ -851,17 +780,14 @@ const progressFill =
 const progressText =
     document.getElementById("progress-text");
 
-const fileStructure =
-    document.getElementById("file-structure");
+const wheelHoursEl =
+    document.getElementById("wheel-hours");
 
-const extraEntriesContainer =
-    document.getElementById("extra-entries");
+const wheelMinutesEl =
+    document.getElementById("wheel-minutes");
 
-const addAlarmButton =
-    document.getElementById("add-alarm");
-
-const generateButton =
-    document.getElementById("generate");
+const wheelSecondsEl =
+    document.getElementById("wheel-seconds");
 
 
 /* ========================================================
@@ -872,19 +798,16 @@ let selectedSound = null;
 
 /*
  * Only ONE preview can play at a time.
- * previewAudio / previewButton track whichever
- * preview is currently the active one.
  */
 let previewAudio = null;
 let previewButton = null;
 
-let alarmRunning = false;
-
 /*
- * The generated + verified alarm file.
- * Start Alarm is only enabled once this exists
- * AND has been proven playable in `player`.
+ * "idle" -> "generating" -> "ready" -> "playing" -> "idle"
+ * Stop can return to "idle" from any of the active states.
  */
+let alarmState = "idle";
+
 let generatedURL = null;
 let generatedVerified = false;
 
@@ -937,37 +860,6 @@ function soundURL(filename) {
 }
 
 
-function getDurationSeconds() {
-
-    const hours =
-        Math.max(
-            0,
-            Number(hoursInput.value) || 0
-        );
-
-
-    const minutes =
-        Math.max(
-            0,
-            Number(minutesInput.value) || 0
-        );
-
-
-    const seconds =
-        Math.max(
-            0,
-            Number(secondsInput.value) || 0
-        );
-
-
-    return (
-        hours * 3600 +
-        minutes * 60 +
-        seconds
-    );
-}
-
-
 function formatDuration(totalSeconds) {
 
     totalSeconds =
@@ -1002,15 +894,236 @@ function formatDuration(totalSeconds) {
 
 
 /* ========================================================
-   PREVIEW CONTROLS
+   WHEEL TIME PICKER
    --------------------------------------------------------
-   One button per sound. It toggles between:
+   A scroll-snap based picker (like iOS's native wheel
+   pickers), built without any library. Each wheel is a
+   scrollable list of numbers with scroll-snap-align: center
+   on each item, and padding top/bottom so the first/last
+   items can reach the visual center. On scroll settling
+   (debounced, plus the 'scrollend' event where supported),
+   it snaps to the nearest item and reports the new value.
+   ======================================================== */
+
+const WHEEL_ITEM_HEIGHT = 40;
+const WHEEL_VISIBLE_ITEMS = 5;
+
+
+function createWheel(container, min, max, initialValue, onChange) {
+
+    container.innerHTML = "";
+
+
+    const track =
+        document.createElement("div");
+
+    const pad =
+        WHEEL_ITEM_HEIGHT *
+        Math.floor(WHEEL_VISIBLE_ITEMS / 2);
+
+    track.style.paddingTop = `${pad}px`;
+    track.style.paddingBottom = `${pad}px`;
+
+
+    for (let value = min; value <= max; value++) {
+
+        const item =
+            document.createElement("div");
+
+        item.className = "wheel-item";
+
+        item.textContent =
+            String(value).padStart(2, "0");
+
+        track.appendChild(item);
+    }
+
+
+    container.appendChild(track);
+
+
+    let currentValue = initialValue;
+
+    let settleTimer = null;
+
+
+    function scrollTopForIndex(index) {
+
+        return index * WHEEL_ITEM_HEIGHT;
+    }
+
+
+    function settle() {
+
+        const index =
+            Math.round(
+                container.scrollTop / WHEEL_ITEM_HEIGHT
+            );
+
+        const clampedIndex =
+            Math.max(
+                0,
+                Math.min(max - min, index)
+            );
+
+        const value =
+            min + clampedIndex;
+
+        const targetScrollTop =
+            scrollTopForIndex(clampedIndex);
+
+        if (
+            Math.abs(container.scrollTop - targetScrollTop) > 0.5
+        ) {
+
+            container.scrollTo({
+                top: targetScrollTop,
+                behavior: "instant"
+            });
+        }
+
+
+        if (value !== currentValue) {
+
+            currentValue = value;
+
+            if (onChange) {
+                onChange(value);
+            }
+        }
+    }
+
+
+    container.addEventListener(
+        "scroll",
+        () => {
+
+            clearTimeout(settleTimer);
+
+            settleTimer =
+                setTimeout(settle, 120);
+        }
+    );
+
+
+    /*
+     * Not all browsers support 'scrollend' yet, but Safari 26
+     * does - use it when available for an instant, precise
+     * settle instead of waiting out the debounce timer.
+     */
+    container.addEventListener(
+        "scrollend",
+        () => {
+
+            clearTimeout(settleTimer);
+
+            settle();
+        }
+    );
+
+
+    requestAnimationFrame(() => {
+
+        container.scrollTo({
+            top: scrollTopForIndex(initialValue - min),
+            behavior: "instant"
+        });
+    });
+
+
+    return {
+
+        getValue: () => currentValue,
+
+        setValue: value => {
+
+            const clamped =
+                Math.max(min, Math.min(max, value));
+
+            currentValue = clamped;
+
+            container.scrollTo({
+                top: scrollTopForIndex(clamped - min),
+                behavior: "smooth"
+            });
+        }
+    };
+}
+
+
+const hoursWheel =
+    createWheel(
+        wheelHoursEl, 0, 23, 0,
+        () => invalidateGeneratedAlarm()
+    );
+
+const minutesWheel =
+    createWheel(
+        wheelMinutesEl, 0, 59, 5,
+        () => invalidateGeneratedAlarm()
+    );
+
+const secondsWheel =
+    createWheel(
+        wheelSecondsEl, 0, 59, 0,
+        () => invalidateGeneratedAlarm()
+    );
+
+
+function getPrimaryDurationSeconds() {
+
+    return (
+        hoursWheel.getValue() * 3600 +
+        minutesWheel.getValue() * 60 +
+        secondsWheel.getValue()
+    );
+}
+
+
+/* ========================================================
+   TAB SWITCHER
+   ======================================================== */
+
+document
+    .querySelectorAll(".tab-button")
+    .forEach(button => {
+
+        button.addEventListener(
+            "click",
+            () => {
+
+                document
+                    .querySelectorAll(".tab-button")
+                    .forEach(b =>
+                        b.classList.remove("active")
+                    );
+
+                document
+                    .querySelectorAll(".tab-panel")
+                    .forEach(p =>
+                        p.classList.remove("active")
+                    );
+
+                button.classList.add("active");
+
+                document
+                    .getElementById(
+                        "tab-" + button.dataset.tab
+                    )
+                    .classList.add("active");
+            }
+        );
+    });
+
+
+/* ========================================================
+   SOUND PREVIEW + PICKER
+   --------------------------------------------------------
+   One button per sound that toggles between:
      ▶  stopped -> pressing plays from 0
      ■  playing -> pressing stops + resets to 0
-   No pause/resume. Only one preview plays at a time.
-   Each sound gets its own persistent Audio object created
-   once at load time (not recreated on every click), which
-   is what was causing the old "can't play again" bug.
+   No pause/resume. Only one preview plays at a time. Each
+   sound gets its own persistent Audio object created once.
    ======================================================== */
 
 function stopCurrentPreview() {
@@ -1021,16 +1134,9 @@ function stopCurrentPreview() {
 
     previewAudio.pause();
 
-    /*
-     * Setting currentTime on an element that hasn't
-     * finished loading can throw in some browsers -
-     * guard it.
-     */
     try {
         previewAudio.currentTime = 0;
-    } catch (_) {
-        // Ignore - will be fine next time it's played.
-    }
+    } catch (_) {}
 
     if (previewButton) {
         previewButton.textContent = "▶";
@@ -1055,12 +1161,6 @@ function createSoundElement(filename) {
     radio.className = "radio";
 
 
-    const info =
-        document.createElement("div");
-
-    info.className = "sound-info";
-
-
     const name =
         document.createElement("div");
 
@@ -1068,19 +1168,6 @@ function createSoundElement(filename) {
 
     name.textContent =
         displayName(filename);
-
-
-    const file =
-        document.createElement("div");
-
-    file.className = "sound-file";
-
-    file.textContent =
-        filename;
-
-
-    info.appendChild(name);
-    info.appendChild(file);
 
 
     const previewControls =
@@ -1093,24 +1180,13 @@ function createSoundElement(filename) {
     const toggleButton =
         document.createElement("button");
 
-    toggleButton.className =
-        "preview";
-
-    toggleButton.type =
-        "button";
-
-    toggleButton.textContent =
-        "▶";
+    toggleButton.className = "preview";
+    toggleButton.type = "button";
+    toggleButton.textContent = "▶";
 
 
-    /*
-     * One persistent Audio object for this sound,
-     * created once. Reused for every play/stop.
-     */
     const audio =
-        new Audio(
-            soundURL(filename)
-        );
+        new Audio(soundURL(filename));
 
     audio.preload = "none";
 
@@ -1119,8 +1195,7 @@ function createSoundElement(filename) {
         "ended",
         () => {
 
-            toggleButton.textContent =
-                "▶";
+            toggleButton.textContent = "▶";
 
             try {
                 audio.currentTime = 0;
@@ -1140,32 +1215,15 @@ function createSoundElement(filename) {
 
             event.stopPropagation();
 
-
             const isThisOnePlaying =
                 previewAudio === audio;
 
-
-            /*
-             * Stop whatever is currently playing,
-             * including this one if it's already
-             * the active preview.
-             */
             stopCurrentPreview();
 
-
             if (isThisOnePlaying) {
-                /*
-                 * Was playing -> the click means
-                 * "stop". We're done.
-                 */
                 return;
             }
 
-
-            /*
-             * Was stopped -> the click means
-             * "play from the beginning".
-             */
             try {
 
                 audio.currentTime = 0;
@@ -1192,9 +1250,7 @@ function createSoundElement(filename) {
     );
 
 
-    previewControls.appendChild(
-        toggleButton
-    );
+    previewControls.appendChild(toggleButton);
 
 
     container.addEventListener(
@@ -1203,36 +1259,21 @@ function createSoundElement(filename) {
 
             document
                 .querySelectorAll(".sound")
-                .forEach(element => {
+                .forEach(el =>
+                    el.classList.remove("selected")
+                );
 
-                    element.classList.remove(
-                        "selected"
-                    );
-                });
+            container.classList.add("selected");
 
+            selectedSound = filename;
 
-            container.classList.add(
-                "selected"
-            );
-
-
-            selectedSound =
-                filename;
-
-
-            /*
-             * Changing the selected sound invalidates
-             * any previously generated alarm file.
-             */
             invalidateGeneratedAlarm();
-
-            fileStructure.style.display = "none";
         }
     );
 
 
     container.appendChild(radio);
-    container.appendChild(info);
+    container.appendChild(name);
     container.appendChild(previewControls);
 
     return container;
@@ -1243,29 +1284,19 @@ function loadSounds() {
 
     soundList.innerHTML = "";
 
-
     soundFiles.forEach(
         (filename, index) => {
 
             const element =
-                createSoundElement(
-                    filename
-                );
+                createSoundElement(filename);
 
-
-            soundList.appendChild(
-                element
-            );
-
+            soundList.appendChild(element);
 
             if (index === 0) {
 
-                element.classList.add(
-                    "selected"
-                );
+                element.classList.add("selected");
 
-                selectedSound =
-                    filename;
+                selectedSound = filename;
             }
         }
     );
@@ -1274,13 +1305,6 @@ function loadSounds() {
 
 /* ========================================================
    ADDITIONAL ALARM SOUNDS (item 7)
-   --------------------------------------------------------
-   Each row is "wait this long after the previous alarm ends,
-   then play this sound". The primary duration/sound section
-   above is always entry 1; these are entries 2+. Kept
-   deliberately simple (a <select> instead of the full
-   preview-toggle sound list) since a proper UI pass is
-   planned separately.
    ======================================================== */
 
 const MAX_ALARM_ENTRIES = 10;
@@ -1307,16 +1331,13 @@ function createExtraEntryRow() {
 
     hoursInput.type = "number";
     hoursInput.min = "0";
-    hoursInput.max = "99";
+    hoursInput.max = "23";
     hoursInput.value = "0";
     hoursInput.className = "delay-hours";
     hoursInput.inputMode = "numeric";
 
     row.appendChild(hoursInput);
-
-    row.appendChild(
-        document.createTextNode("h")
-    );
+    row.appendChild(document.createTextNode("h"));
 
 
     const minutesInput =
@@ -1330,10 +1351,7 @@ function createExtraEntryRow() {
     minutesInput.inputMode = "numeric";
 
     row.appendChild(minutesInput);
-
-    row.appendChild(
-        document.createTextNode("m")
-    );
+    row.appendChild(document.createTextNode("m"));
 
 
     const secondsInput =
@@ -1347,10 +1365,7 @@ function createExtraEntryRow() {
     secondsInput.inputMode = "numeric";
 
     row.appendChild(secondsInput);
-
-    row.appendChild(
-        document.createTextNode("s, play")
-    );
+    row.appendChild(document.createTextNode("s, play"));
 
 
     const select =
@@ -1364,9 +1379,7 @@ function createExtraEntryRow() {
             document.createElement("option");
 
         option.value = filename;
-
-        option.textContent =
-            displayName(filename);
+        option.textContent = displayName(filename);
 
         select.appendChild(option);
     });
@@ -1389,8 +1402,6 @@ function createExtraEntryRow() {
 
             invalidateGeneratedAlarm();
 
-            fileStructure.style.display = "none";
-
             updateAddAlarmButtonState();
         }
     );
@@ -1403,12 +1414,7 @@ function createExtraEntryRow() {
 
             input.addEventListener(
                 "change",
-                () => {
-
-                    invalidateGeneratedAlarm();
-
-                    fileStructure.style.display = "none";
-                }
+                () => invalidateGeneratedAlarm()
             );
         }
     );
@@ -1427,7 +1433,8 @@ function updateAddAlarmButtonState() {
         ).length;
 
     addAlarmButton.disabled =
-        count >= MAX_ALARM_ENTRIES;
+        count >= MAX_ALARM_ENTRIES ||
+        alarmState !== "idle";
 
     addAlarmButton.textContent =
         count >= MAX_ALARM_ENTRIES
@@ -1446,23 +1453,16 @@ addAlarmButton.addEventListener(
 
         invalidateGeneratedAlarm();
 
-        fileStructure.style.display = "none";
-
         updateAddAlarmButtonState();
     }
 );
 
 
-/*
- * Builds the full alarm sequence: entry 1 is always the
- * primary duration + selected sound above; entries 2+ come
- * from the extra-entry rows, in order.
- */
 function buildAlarmSequence() {
 
     const sequence = [
         {
-            delaySeconds: getDurationSeconds(),
+            delaySeconds: getPrimaryDurationSeconds(),
             filename: selectedSound
         }
     ];
@@ -1504,253 +1504,6 @@ function buildAlarmSequence() {
     return sequence;
 }
 
-
-/* ========================================================
-   AUDIO CAPABILITY TESTING
-   ======================================================== */
-
-function setDiagnostic(
-    id,
-    supported,
-    customText = null
-) {
-
-    const element =
-        document.getElementById(id);
-
-
-    element.classList.remove(
-        "yes",
-        "no",
-        "unknown"
-    );
-
-
-    if (supported === true) {
-
-        element.textContent =
-            customText || "✓ Yes";
-
-        element.classList.add(
-            "yes"
-        );
-
-    } else if (supported === false) {
-
-        element.textContent =
-            customText || "✗ No";
-
-        element.classList.add(
-            "no"
-        );
-
-    } else {
-
-        element.textContent =
-            customText || "? Unknown";
-
-        element.classList.add(
-            "unknown"
-        );
-    }
-}
-
-
-function getRecordingMimeType() {
-
-    if (
-        typeof MediaRecorder ===
-        "undefined"
-    ) {
-        return null;
-    }
-
-
-    const candidates = [
-
-        "audio/mp4;codecs=mp4a.40.2",
-
-        "audio/mp4;codecs=mp4a",
-
-        "audio/mp4",
-
-        "audio/webm;codecs=opus",
-
-        "audio/webm"
-
-    ];
-
-
-    for (const type of candidates) {
-
-        if (
-            MediaRecorder.isTypeSupported(
-                type
-            )
-        ) {
-            return type;
-        }
-    }
-
-
-    return null;
-}
-
-
-function testAudioCapabilities() {
-
-    /*
-     * WebCodecs.
-     *
-     * Safari 26 introduced these.
-     */
-    setDiagnostic(
-        "test-audio-encoder",
-        typeof AudioEncoder !==
-            "undefined"
-    );
-
-
-    setDiagnostic(
-        "test-audio-decoder",
-        typeof AudioDecoder !==
-            "undefined"
-    );
-
-
-    /*
-     * MediaRecorder.
-     */
-    const hasRecorder =
-        typeof MediaRecorder !==
-        "undefined";
-
-
-    setDiagnostic(
-        "test-media-recorder",
-        hasRecorder
-    );
-
-
-    /*
-     * MediaSource.
-     *
-     * We report it but DO NOT rely on it -
-     * confirmed unavailable on the target iPhone.
-     */
-    const hasMediaSource =
-        typeof MediaSource !==
-        "undefined";
-
-
-    setDiagnostic(
-        "test-media-source",
-        hasMediaSource
-    );
-
-
-    /*
-     * MIME support.
-     */
-    let aacSupported = false;
-    let mp4Supported = false;
-
-
-    if (hasRecorder) {
-
-        const candidates = [
-
-            "audio/mp4;codecs=mp4a.40.2",
-
-            "audio/mp4;codecs=mp4a",
-
-            "audio/mp4",
-
-        ];
-
-
-        aacSupported =
-            candidates.some(
-                type =>
-                    MediaRecorder
-                        .isTypeSupported(type)
-            );
-
-
-        mp4Supported =
-            MediaRecorder
-                .isTypeSupported(
-                    "audio/mp4"
-                );
-    }
-
-
-    setDiagnostic(
-        "test-aac",
-        aacSupported
-    );
-
-
-    setDiagnostic(
-        "test-mp4",
-        mp4Supported
-    );
-
-
-    /*
-     * Enable the generator if EITHER the fast WebCodecs path
-     * or the real-time MediaRecorder fallback is usable.
-     */
-    const hasWebCodecs =
-        typeof AudioEncoder !== "undefined";
-
-    generateButton.disabled =
-        !hasWebCodecs &&
-        (!hasRecorder || !getRecordingMimeType());
-}
-
-
-/* ========================================================
-   FAST GENERATOR (WebCodecs AudioEncoder + mp4-muxer)
-   --------------------------------------------------------
-   This is the real fix for "a 1-hour alarm shouldn't take
-   1 hour to generate". AudioEncoder lets us push audio data
-   as fast as the CPU can encode it - nothing here is tied to
-   wall-clock time, so a 60-minute silence encodes in roughly
-   the time it takes to run the encoder over that much audio
-   (typically a few seconds on a phone), not 60 minutes.
-   
-   AudioEncoder only outputs encoded AAC chunks/frames - it
-   does NOT produce a playable file by itself. A real MP4
-   container (ftyp/moov/mdat boxes, sample tables, timing)
-   still has to be built around those chunks. Rather than
-   hand-write that box-level ISO-BMFF logic (high risk of
-   subtle bugs that only show up as "Safari can't play this"),
-   this uses mp4-muxer - a small, dependency-free, purely
-   client-side library written specifically to sit on top of
-   WebCodecs output. It's loaded on demand from a CDN (no
-   backend, no build step, still just static files via GitHub
-   Pages) and only when this path is actually used.
-   ======================================================== */
-
-/* ========================================================
-   MP4 STRUCTURE INSPECTOR
-   --------------------------------------------------------
-   Walks the top-level ISO-BMFF boxes of a generated file
-   (ftyp/moov/mdat/etc, recursing into known container boxes)
-   and renders a plain-text tree. This exists specifically so
-   we can see whether a generated file is structurally sane
-   WITHOUT Web Inspector, per the original requirement - if
-   Safari rejects a file outright, this is the only way to
-   see why on-device.
-   ======================================================== */
-
-const MP4_CONTAINER_BOX_TYPES =
-    new Set([
-        "moov", "trak", "mdia", "minf",
-        "stbl", "udta", "edts", "mvex",
-        "moof", "traf", "mfra"
-    ]);
 
 
 function readTopLevelBoxes(view, start, end) {
@@ -1833,55 +1586,6 @@ function readTopLevelBoxes(view, start, end) {
     return boxes;
 }
 
-
-function describeBoxes(view, start, end, depth) {
-
-    const boxes =
-        readTopLevelBoxes(view, start, end);
-
-    let lines = [];
-
-
-    for (const box of boxes) {
-
-        const indent =
-            "  ".repeat(depth);
-
-        if (box.malformed) {
-
-            lines.push(
-                `${indent}${box.type} ` +
-                `(malformed box header near byte ${box.start})`
-            );
-
-            continue;
-        }
-
-
-        lines.push(
-            `${indent}${box.type}  (${box.size} bytes, ` +
-            `offset ${box.start})`
-        );
-
-
-        if (MP4_CONTAINER_BOX_TYPES.has(box.type)) {
-
-            lines = lines.concat(
-                describeBoxes(
-                    view,
-                    box.start + box.headerSize,
-                    box.start + box.size,
-                    depth + 1
-                )
-            );
-        }
-    }
-
-
-    return lines;
-}
-
-
 function findChildBox(view, start, end, type) {
 
     const boxes =
@@ -1892,366 +1596,6 @@ function findChildBox(view, start, end, type) {
         null
     );
 }
-
-
-function findDescendantBox(view, start, end, path) {
-
-    let currentStart = start;
-    let currentEnd = end;
-    let box = null;
-
-
-    for (const type of path) {
-
-        box =
-            findChildBox(
-                view,
-                currentStart,
-                currentEnd,
-                type
-            );
-
-        if (!box || box.malformed) {
-            return null;
-        }
-
-        currentStart =
-            box.start + box.headerSize;
-
-        currentEnd =
-            box.start + box.size;
-    }
-
-
-    return box;
-}
-
-
-function readFixed16_16(view, offset) {
-
-    return (
-        view.getUint16(offset, false) +
-        view.getUint16(offset + 2, false) / 65536
-    );
-}
-
-
-function deepInspectAudioTrack(view, totalLength) {
-
-    const lines = [];
-
-
-    const mdatBox =
-        findChildBox(view, 0, totalLength, "mdat");
-
-    if (!mdatBox) {
-
-        lines.push(
-            "No mdat box found at all - there is no audio data " +
-            "in this file."
-        );
-
-        return lines;
-    }
-
-
-    const mdatPayloadStart =
-        mdatBox.start + mdatBox.headerSize;
-
-    const mdatPayloadEnd =
-        mdatBox.start + mdatBox.size;
-
-    const mdatPayloadSize =
-        mdatPayloadEnd - mdatPayloadStart;
-
-
-    lines.push(
-        `mdat payload: ${mdatPayloadSize} bytes ` +
-        `(bytes ${mdatPayloadStart} to ${mdatPayloadEnd})`
-    );
-
-
-    /*
-     * stsz - does the sum of declared sample sizes actually
-     * match how much audio data mdat contains?
-     */
-    const stszBox =
-        findDescendantBox(
-            view, 0, totalLength,
-            ["moov", "trak", "mdia", "minf", "stbl", "stsz"]
-        );
-
-    if (stszBox) {
-
-        const body =
-            stszBox.start + stszBox.headerSize;
-
-        const uniformSampleSize =
-            view.getUint32(body + 4, false);
-
-        const sampleCount =
-            view.getUint32(body + 8, false);
-
-        let totalSampleBytes = 0;
-
-
-        if (uniformSampleSize === 0) {
-
-            let entryOffset = body + 12;
-
-            for (let i = 0; i < sampleCount; i++) {
-
-                totalSampleBytes +=
-                    view.getUint32(entryOffset, false);
-
-                entryOffset += 4;
-            }
-
-        } else {
-
-            totalSampleBytes =
-                uniformSampleSize * sampleCount;
-        }
-
-
-        lines.push(
-            `stsz: sample_count = ${sampleCount}, ` +
-            `sum of sample sizes = ${totalSampleBytes} bytes`
-        );
-
-        lines.push(
-            totalSampleBytes === mdatPayloadSize
-                ? "  -> matches mdat payload size (consistent)"
-                : `  -> MISMATCH: mdat payload is ` +
-                  `${mdatPayloadSize} bytes, difference of ` +
-                  `${mdatPayloadSize - totalSampleBytes} bytes`
-        );
-
-    } else {
-
-        lines.push(
-            "Could not find/parse stsz box."
-        );
-    }
-
-
-    /*
-     * stco - do the chunk offsets actually point inside mdat?
-     */
-    const stcoBox =
-        findDescendantBox(
-            view, 0, totalLength,
-            ["moov", "trak", "mdia", "minf", "stbl", "stco"]
-        );
-
-    if (stcoBox) {
-
-        const body =
-            stcoBox.start + stcoBox.headerSize;
-
-        const entryCount =
-            view.getUint32(body + 4, false);
-
-        const firstOffset =
-            entryCount > 0
-                ? view.getUint32(body + 8, false)
-                : null;
-
-        const lastOffset =
-            entryCount > 0
-                ? view.getUint32(
-                    body + 8 + (entryCount - 1) * 4,
-                    false
-                  )
-                : null;
-
-        lines.push(
-            `stco: ${entryCount} chunk offsets, ` +
-            `first = ${firstOffset}, last = ${lastOffset}`
-        );
-
-        if (firstOffset !== null) {
-
-            const inRange =
-                firstOffset >= mdatPayloadStart &&
-                lastOffset < mdatPayloadEnd;
-
-            lines.push(
-                inRange
-                    ? "  -> offsets fall inside mdat (consistent)"
-                    : `  -> MISMATCH: mdat data is ` +
-                      `${mdatPayloadStart}-${mdatPayloadEnd}, ` +
-                      `chunk offsets fall outside that range`
-            );
-        }
-
-    } else {
-
-        lines.push(
-            "Could not find/parse stco box " +
-            "(large files may use co64 instead - not checked here)."
-        );
-    }
-
-
-    /*
-     * stsd -> the audio sample entry (e.g. mp4a) -> esds ->
-     * raw AudioSpecificConfig bytes. This is the actual codec
-     * configuration a decoder relies on - if anything here is
-     * wrong, Safari will reject the file exactly the way it has
-     * been, regardless of how correct the surrounding container
-     * boxes are.
-     */
-    const stsdBox =
-        findDescendantBox(
-            view, 0, totalLength,
-            ["moov", "trak", "mdia", "minf", "stbl", "stsd"]
-        );
-
-    if (stsdBox) {
-
-        const body =
-            stsdBox.start + stsdBox.headerSize;
-
-        const entryCount =
-            view.getUint32(body + 4, false);
-
-        lines.push(
-            `stsd: ${entryCount} sample entry/entries`
-        );
-
-
-        const entryStart = body + 8;
-
-        const entrySize =
-            view.getUint32(entryStart, false);
-
-        const entryType =
-            String.fromCharCode(
-                view.getUint8(entryStart + 4),
-                view.getUint8(entryStart + 5),
-                view.getUint8(entryStart + 6),
-                view.getUint8(entryStart + 7)
-            );
-
-        lines.push(
-            `stsd entry: type = '${entryType}', ` +
-            `size = ${entrySize} bytes`
-        );
-
-
-        if (entryType === "mp4a" || entryType === "aac ") {
-
-            /*
-             * AudioSampleEntry layout (ISO/IEC 14496-12 8.16.3):
-             * SampleEntry base: reserved(6) + data_reference_index(2) = 8
-             * then: reserved(8) + channelcount(2) + samplesize(2) +
-             *       pre_defined(2) + reserved(2) + samplerate(4) = 20
-             * = 28 bytes total before any child boxes (like esds).
-             */
-            const sampleEntryBody =
-                entryStart + 8;
-
-            const channelCount =
-                view.getUint16(sampleEntryBody + 16, false);
-
-            const sampleSizeBits =
-                view.getUint16(sampleEntryBody + 18, false);
-
-            const sampleRate =
-                readFixed16_16(
-                    view,
-                    sampleEntryBody + 24
-                );
-
-            lines.push(
-                `mp4a fixed fields: channel_count = ${channelCount}, ` +
-                `sample_size = ${sampleSizeBits} bits, ` +
-                `sample_rate = ${sampleRate} Hz`
-            );
-
-
-            const esdsSearchStart =
-                sampleEntryBody + 28;
-
-            const esdsSearchEnd =
-                entryStart + entrySize;
-
-            const esdsBox =
-                findChildBox(
-                    view,
-                    esdsSearchStart,
-                    esdsSearchEnd,
-                    "esds"
-                );
-
-            if (esdsBox) {
-
-                const esdsBytes = [];
-
-                for (
-                    let i = esdsBox.start + esdsBox.headerSize;
-                    i < esdsBox.start + esdsBox.size;
-                    i++
-                ) {
-
-                    esdsBytes.push(
-                        view.getUint8(i)
-                            .toString(16)
-                            .padStart(2, "0")
-                    );
-                }
-
-                lines.push(
-                    `esds: ${esdsBox.size} bytes, raw content = ` +
-                    esdsBytes.join(" ")
-                );
-
-            } else {
-
-                lines.push(
-                    "No esds box found inside the mp4a sample " +
-                    "entry - AAC needs this to carry its " +
-                    "AudioSpecificConfig. If this is missing, " +
-                    "that is very likely the whole problem."
-                );
-            }
-
-        } else {
-
-            lines.push(
-                `Sample entry type is '${entryType}', not 'mp4a' - ` +
-                `unexpected for an AAC audio track.`
-            );
-        }
-
-    } else {
-
-        lines.push(
-            "Could not find/parse stsd box."
-        );
-    }
-
-
-    return lines;
-}
-
-
-/* ========================================================
-   ESDS CORRUPTION FIX (mp4-muxer bug workaround)
-   --------------------------------------------------------
-   Confirmed by hand-decoding the esds bytes from a real
-   generated file, TWICE, byte-for-byte identical: mp4-muxer
-   is writing an extra, spurious nested
-   ES_Descriptor > DecoderConfigDescriptor > DecSpecificInfo
-   tree INSIDE where the raw AudioSpecificConfig bytes should
-   be. The real config is in there (confirmed against the
-   spec by hand), just wrapped in a duplicate layer that
-   shouldn't exist. Safari's strict decoder rejects this;
-   this function surgically removes the duplicate layer and
-   cascades the resulting size reduction through every
-   ancestor box and the stco offset table.
-   ======================================================== */
 
 function readExpandableLength(view, offset) {
 
@@ -2278,7 +1622,6 @@ function readExpandableLength(view, offset) {
 
     return { value, bytesConsumed };
 }
-
 
 async function fixMuxerEsdsBug(blob) {
 
@@ -2680,67 +2023,6 @@ async function fixMuxerEsdsBug(blob) {
     };
 }
 
-
-async function describeMp4Structure(blob) {
-
-    const buffer =
-        await blob.arrayBuffer();
-
-    const view =
-        new DataView(buffer);
-
-    const lines =
-        describeBoxes(
-            view,
-            0,
-            buffer.byteLength,
-            0
-        );
-
-    if (lines.length === 0) {
-
-        return (
-            `File is ${buffer.byteLength} bytes but contains ` +
-            `no recognizable top-level MP4 boxes at all.`
-        );
-    }
-
-
-    let deepLines = [];
-
-    try {
-
-        deepLines =
-            deepInspectAudioTrack(
-                view,
-                buffer.byteLength
-            );
-
-    } catch (error) {
-
-        deepLines = [
-            "Deep inspection failed: " + error.message
-        ];
-    }
-
-
-    return (
-        `File size: ${buffer.byteLength} bytes\n\n` +
-        lines.join("\n") +
-        `\n\n--- Field-level checks ---\n\n` +
-        deepLines.join("\n")
-    );
-}
-
-
-function showFileStructure(text) {
-
-    fileStructure.textContent = text;
-
-    fileStructure.style.display = "block";
-}
-
-
 function downmixToMono(audioBuffer) {
 
     if (audioBuffer.numberOfChannels === 1) {
@@ -2778,8 +2060,49 @@ function downmixToMono(audioBuffer) {
     return mono;
 }
 
+function getRecordingMimeType() {
+
+    if (
+        typeof MediaRecorder ===
+        "undefined"
+    ) {
+        return null;
+    }
+
+
+    const candidates = [
+
+        "audio/mp4;codecs=mp4a.40.2",
+
+        "audio/mp4;codecs=mp4a",
+
+        "audio/mp4",
+
+        "audio/webm;codecs=opus",
+
+        "audio/webm"
+
+    ];
+
+
+    for (const type of candidates) {
+
+        if (
+            MediaRecorder.isTypeSupported(
+                type
+            )
+        ) {
+            return type;
+        }
+    }
+
+
+    return null;
+}
 
 async function generateFastAlarm(sequence) {
+
+    generationStopRequested = false;
 
     if (typeof AudioEncoder === "undefined") {
 
@@ -3121,6 +2444,10 @@ async function generateFastAlarm(sequence) {
                 throw encodeError;
             }
 
+            if (generationStopRequested) {
+                throw new Error("Generation stopped.");
+            }
+
 
             await waitForEncoderCapacity(
                 MAX_QUEUED_CHUNKS
@@ -3293,17 +2620,6 @@ async function generateFastAlarm(sequence) {
         { type: "audio/mp4" }
     );
 }
-
-
-/* ========================================================
-   FALLBACK GENERATOR (real-time MediaRecorder)
-   --------------------------------------------------------
-   Used only when AudioEncoder isn't available, or if the
-   fast path above fails for some reason. Deliberately
-   real-time: a 60 minute alarm takes roughly 60 minutes to
-   generate this way. This was the original/only generator
-   before the fast WebCodecs path existed above.
-   ======================================================== */
 
 async function generateCompactAlarm(audioContext, mimeType, sequence) {
 
@@ -3620,17 +2936,6 @@ async function generateCompactAlarm(audioContext, mimeType, sequence) {
     );
 }
 
-
-
-/* ========================================================
-   VALIDATION
-   --------------------------------------------------------
-   Never claim success just because generation finished.
-   Load the Blob through the SAME <audio> element that
-   Start Alarm will use, and confirm Safari can read its
-   metadata AND actually start playback.
-   ======================================================== */
-
 function waitForMetadata(mediaElement) {
 
     return new Promise(
@@ -3689,7 +2994,6 @@ function waitForMetadata(mediaElement) {
         }
     );
 }
-
 
 function waitForPlayable(mediaElement) {
 
@@ -3752,7 +3056,6 @@ function waitForPlayable(mediaElement) {
     });
 }
 
-
 async function verifyGeneratedAudio(url) {
 
     player.pause();
@@ -3792,364 +3095,6 @@ async function verifyGeneratedAudio(url) {
 
     return player.duration;
 }
-
-
-/* ========================================================
-   GENERATED-ALARM LIFECYCLE
-   ======================================================== */
-
-function invalidateGeneratedAlarm() {
-
-    if (generatedURL) {
-
-        URL.revokeObjectURL(
-            generatedURL
-        );
-    }
-
-    generatedURL = null;
-    generatedVerified = false;
-
-    startButton.disabled = true;
-
-    if (!alarmRunning) {
-
-        status.textContent =
-            "Settings changed - generate the alarm file again.";
-    }
-}
-
-
-generateButton.addEventListener(
-    "click",
-    async () => {
-
-        if (alarmRunning) {
-            return;
-        }
-
-
-        const sequence =
-            buildAlarmSequence();
-
-        if (sequence.some(entry => !entry.filename)) {
-
-            status.textContent =
-                "Please select an alarm sound for every entry.";
-
-            return;
-        }
-
-
-        if (sequence[0].delaySeconds <= 0) {
-
-            status.textContent =
-                "Please enter a duration greater than zero.";
-
-            return;
-        }
-
-
-        /*
-         * Rough size estimate at the 48 kbps mono target used by
-         * both generators, based on total delay time across every
-         * entry (ignoring the alarm sounds' own short durations,
-         * which are negligible by comparison). This can't prevent
-         * a crash on its own (a page crash from memory pressure
-         * isn't something a try/catch can intercept), but it gives
-         * an explicit heads-up before committing to a very long
-         * generation instead of silently attempting it and possibly
-         * taking the tab down, per "be explicit about test failures
-         * rather than pretending something works".
-         */
-        const totalDelaySeconds =
-            sequence.reduce(
-                (sum, entry) => sum + entry.delaySeconds,
-                0
-            );
-
-        const estimatedMB =
-            (48000 / 8) *
-            totalDelaySeconds /
-            (1024 * 1024);
-
-        const LONG_DURATION_WARNING_SECONDS =
-            2 * 3600;
-
-        if (
-            totalDelaySeconds >
-            LONG_DURATION_WARNING_SECONDS
-        ) {
-
-            const proceed =
-                window.confirm(
-                    `This will generate an estimated ~${estimatedMB.toFixed(0)} MB ` +
-                    `file totalling ${formatDuration(totalDelaySeconds)} of silence. ` +
-                    `Very long durations can push Safari on iPhone past its ` +
-                    `per-tab memory limit and crash the page. Continue anyway?`
-                );
-
-            if (!proceed) {
-
-                status.textContent =
-                    "Generation cancelled.";
-
-                return;
-            }
-        }
-
-
-        const hasFastPath =
-            typeof AudioEncoder !== "undefined";
-
-        const mimeType =
-            getRecordingMimeType();
-
-        if (!hasFastPath && !mimeType) {
-
-            status.textContent =
-                "No generator available on this browser " +
-                "(no AudioEncoder, no compressed audio recorder).";
-
-            return;
-        }
-
-
-        generateButton.disabled = true;
-        startButton.disabled = true;
-        stopButton.disabled = false;
-
-        invalidateGeneratedAlarm();
-
-        fileStructure.style.display = "none";
-
-
-        let blob = null;
-        let methodLabel = null;
-
-
-        try {
-
-            /*
-             * Prefer the fast WebCodecs path - it doesn't
-             * wait out the actual alarm duration.
-             */
-            if (hasFastPath) {
-
-                try {
-
-                    status.textContent =
-                        "Preparing fast generator...";
-
-                    blob =
-                        await generateFastAlarm(sequence);
-
-                    methodLabel =
-                        "fast WebCodecs generator";
-
-                } catch (fastError) {
-
-                    console.error(fastError);
-
-                    status.textContent =
-                        "Fast generator failed (" +
-                        fastError.message +
-                        ") - falling back to the real-time generator...";
-
-                    blob = null;
-                }
-            }
-
-
-            if (!blob) {
-
-                if (!mimeType) {
-
-                    throw new Error(
-                        "Fast generator failed and no compressed " +
-                        "audio recorder is available as a fallback."
-                    );
-                }
-
-
-                /*
-                 * IMPORTANT: on the direct (non-fallback) path this
-                 * runs as the very first thing in the click handler,
-                 * before any other await. On iOS Safari, an
-                 * AudioContext only reliably unlocks when it's
-                 * created/resumed within the original user-gesture
-                 * call stack - creating it after an `await fetch(...)`
-                 * (as the original version did) is what caused the
-                 * generated file to end up silent. When we reach this
-                 * as a fallback after a failed fast-path attempt, that
-                 * guarantee no longer strictly holds, but this branch
-                 * only runs on browsers without WebCodecs at all or on
-                 * rare fast-path failures, so it's an acceptable
-                 * trade-off rather than the common case.
-                 */
-                generationAudioContext =
-                    new AudioContext();
-
-                try {
-
-                    await generationAudioContext.resume();
-
-                } catch (error) {
-
-                    console.error(error);
-                }
-
-
-                status.textContent =
-                    "Preparing real-time generator...";
-
-                blob =
-                    await generateCompactAlarm(
-                        generationAudioContext,
-                        mimeType,
-                        sequence
-                    );
-
-                methodLabel =
-                    "real-time recorder fallback";
-            }
-
-
-            /*
-             * Attempt the esds corruption fix. This is safe to run
-             * unconditionally - it checks for the exact known
-             * corruption signature first and does nothing if a
-             * file doesn't match it (e.g. the MediaRecorder
-             * fallback path, which doesn't use mp4-muxer at all).
-             */
-            let fixNote = "";
-
-            try {
-
-                const fixResult =
-                    await fixMuxerEsdsBug(blob);
-
-                if (fixResult.patched) {
-
-                    blob = fixResult.blob;
-
-                    fixNote =
-                        ` [esds fix applied: ${fixResult.reason}]`;
-
-                } else {
-
-                    fixNote =
-                        ` [esds fix not applied: ${fixResult.reason}]`;
-                }
-
-            } catch (fixError) {
-
-                fixNote =
-                    ` [esds fix threw an error: ${fixError.message}]`;
-            }
-
-
-            /*
-             * Show the file's actual box structure regardless of
-             * what happens next - this is the main diagnostic tool
-             * available without Web Inspector.
-             */
-            try {
-
-                const structureText =
-                    await describeMp4Structure(blob);
-
-                showFileStructure(
-                    structureText + "\n\n" + fixNote.trim()
-                );
-
-            } catch (inspectError) {
-
-                showFileStructure(
-                    "Could not inspect file: " +
-                    inspectError.message +
-                    "\n\n" + fixNote.trim()
-                );
-            }
-
-
-            status.textContent =
-                "Verifying generated file in Safari...";
-
-
-            const url =
-                URL.createObjectURL(
-                    blob
-                );
-
-
-            const verifiedDuration =
-                await verifyGeneratedAudio(
-                    url
-                );
-
-
-            generatedURL = url;
-            generatedVerified = true;
-
-
-            const sizeMB =
-                blob.size / (1024 * 1024);
-
-
-            status.textContent =
-                `Verified (${methodLabel}): ` +
-                `${formatDuration(verifiedDuration)} ` +
-                `(${sizeMB.toFixed(2)} MB, ${blob.type}). ` +
-                `Ready to start.`;
-
-
-            startButton.disabled = false;
-
-            progress.style.display = "block";
-
-            progressFill.style.width = "0%";
-
-            progressText.textContent =
-                `00:00:00 / ${formatDuration(verifiedDuration)}`;
-
-
-        } catch (error) {
-
-            console.error(error);
-
-
-            invalidateGeneratedAlarm();
-
-
-            let details =
-                "Generation failed: " + error.message;
-
-            if (blob) {
-
-                const sizeMB =
-                    blob.size / (1024 * 1024);
-
-                details +=
-                    ` [${methodLabel || "unknown method"}, ` +
-                    `${sizeMB.toFixed(2)} MB, ${blob.type}]`;
-            }
-
-            status.textContent =
-                details;
-
-
-        } finally {
-
-            stopGenerationContext();
-
-            generateButton.disabled = false;
-
-            stopButton.disabled = true;
-        }
-    }
-);
-
 
 function stopGenerationContext() {
 
@@ -4205,66 +3150,381 @@ function stopGenerationContext() {
 
 
 /* ========================================================
-   START / STOP ALARM
+   ALARM STATE MACHINE
    --------------------------------------------------------
-   Start: play the already-generated, already-verified file
-   from time 0 using the same <audio> element it was
-   verified on. No JS timer is involved in the alarm itself -
-   the silence is baked into the file.
-   Stop: pause, reset to 0, return UI to ready state.
+   idle -> generating -> ready -> playing -> idle
+   Stop can return to idle from generating, ready, or playing.
+
+   "ready" -> "playing" requires an actual tap on the action
+   button (not an automatic transition) - this is deliberate.
+   Generation is asynchronous and can take anywhere from a
+   moment to tens of seconds; if playback started automatically
+   once generation finished, the call to player.play() would
+   happen long after the tap that originally kicked things off,
+   which breaks iOS Safari's requirement that playback be tied
+   to a real, immediate user gesture in order to keep playing
+   while the phone is locked. Requiring a second tap keeps that
+   guarantee intact.
    ======================================================== */
 
-startButton.addEventListener(
-    "click",
-    async () => {
+function setControlsLocked(locked) {
 
-        if (alarmRunning) {
+    [wheelHoursEl, wheelMinutesEl, wheelSecondsEl].forEach(
+        el => {
+
+            el.style.pointerEvents =
+                locked ? "none" : "auto";
+
+            el.style.opacity =
+                locked ? "0.5" : "1";
+        }
+    );
+
+    soundList.style.pointerEvents =
+        locked ? "none" : "auto";
+
+    soundList.style.opacity =
+        locked ? "0.5" : "1";
+
+    extraEntriesContainer.style.pointerEvents =
+        locked ? "none" : "auto";
+
+    extraEntriesContainer.style.opacity =
+        locked ? "0.5" : "1";
+
+    updateAddAlarmButtonState();
+}
+
+
+function setAlarmState(state) {
+
+    alarmState = state;
+
+
+    switch (state) {
+
+        case "idle":
+
+            actionButton.disabled = false;
+            actionButton.textContent = "Start Alarm";
+            actionButton.classList.remove("ready");
+
+            stopButton.disabled = true;
+
+            setControlsLocked(false);
+
+            break;
+
+
+        case "generating":
+
+            actionButton.disabled = true;
+            actionButton.textContent = "Generating...";
+            actionButton.classList.remove("ready");
+
+            stopButton.disabled = false;
+
+            setControlsLocked(true);
+
+            break;
+
+
+        case "ready":
+
+            actionButton.disabled = false;
+            actionButton.textContent = "Tap to Begin";
+            actionButton.classList.add("ready");
+
+            stopButton.disabled = false;
+
+            setControlsLocked(true);
+
+            break;
+
+
+        case "playing":
+
+            actionButton.disabled = true;
+            actionButton.textContent = "Alarm Running";
+            actionButton.classList.remove("ready");
+
+            stopButton.disabled = false;
+
+            setControlsLocked(true);
+
+            break;
+    }
+}
+
+
+function invalidateGeneratedAlarm() {
+
+    if (generatedURL) {
+
+        URL.revokeObjectURL(generatedURL);
+
+        generatedURL = null;
+    }
+
+    generatedVerified = false;
+
+    if (alarmState !== "generating") {
+
+        setAlarmState("idle");
+    }
+}
+
+
+async function startGeneration() {
+
+    const sequence =
+        buildAlarmSequence();
+
+    if (sequence.some(entry => !entry.filename)) {
+
+        status.textContent =
+            "Please select an alarm sound for every entry.";
+
+        return;
+    }
+
+    if (sequence[0].delaySeconds <= 0) {
+
+        status.textContent =
+            "Please set a duration greater than zero.";
+
+        return;
+    }
+
+
+    /*
+     * Rough size estimate at the 48 kbps mono target both
+     * generators use, based on total delay time (the alarm
+     * sounds themselves are short and negligible by
+     * comparison). This can't prevent a crash on its own - a
+     * page crash from memory pressure isn't something a
+     * try/catch can intercept - but it gives an explicit
+     * heads-up before committing to a very long generation.
+     */
+    const totalDelaySeconds =
+        sequence.reduce(
+            (sum, entry) => sum + entry.delaySeconds,
+            0
+        );
+
+    const estimatedMB =
+        (48000 / 8) * totalDelaySeconds / (1024 * 1024);
+
+    const LONG_DURATION_WARNING_SECONDS =
+        2 * 3600;
+
+    if (totalDelaySeconds > LONG_DURATION_WARNING_SECONDS) {
+
+        const proceed =
+            window.confirm(
+                `This alarm totals ${formatDuration(totalDelaySeconds)} ` +
+                `of silence (roughly ${estimatedMB.toFixed(0)} MB). ` +
+                `Very long durations can push Safari on iPhone past its ` +
+                `per-tab memory limit and crash the page. Continue anyway?`
+            );
+
+        if (!proceed) {
+
+            status.textContent = "Cancelled.";
+
             return;
+        }
+    }
+
+
+    const hasFastPath =
+        typeof AudioEncoder !== "undefined";
+
+    const mimeType =
+        getRecordingMimeType();
+
+    if (!hasFastPath && !mimeType) {
+
+        status.textContent =
+            "This browser can't generate compressed alarm audio.";
+
+        return;
+    }
+
+
+    setAlarmState("generating");
+
+    invalidateGeneratedAlarm();
+
+
+    let blob = null;
+
+
+    try {
+
+        if (hasFastPath) {
+
+            try {
+
+                status.textContent = "Preparing...";
+
+                blob = await generateFastAlarm(sequence);
+
+            } catch (fastError) {
+
+                console.error(fastError);
+
+                blob = null;
+
+                if (!mimeType) {
+                    throw fastError;
+                }
+
+                status.textContent =
+                    "Falling back to a slower generator...";
+            }
         }
 
 
-        if (!generatedURL || !generatedVerified) {
+        if (!blob) {
 
-            status.textContent =
-                "Generate and verify the alarm file first.";
+            if (!mimeType) {
 
-            return;
+                throw new Error(
+                    "No generator available on this browser."
+                );
+            }
+
+
+            generationAudioContext =
+                new AudioContext();
+
+            try {
+
+                await generationAudioContext.resume();
+
+            } catch (error) {
+
+                console.error(error);
+            }
+
+
+            status.textContent = "Preparing...";
+
+            blob =
+                await generateCompactAlarm(
+                    generationAudioContext,
+                    mimeType,
+                    sequence
+                );
         }
 
 
-        stopCurrentPreview();
-
-
-        alarmRunning = true;
-
-        startButton.disabled = true;
-        stopButton.disabled = false;
-        generateButton.disabled = true;
-
-
+        /*
+         * Silently repair the known mp4-muxer esds corruption
+         * if this file matches that pattern. Safe to run
+         * unconditionally - it checks the exact known signature
+         * first and does nothing otherwise (e.g. for the
+         * MediaRecorder fallback, which doesn't use mp4-muxer).
+         */
         try {
 
-            player.currentTime = 0;
+            const fixResult =
+                await fixMuxerEsdsBug(blob);
 
-            await player.play();
+            if (fixResult.patched) {
 
-            status.textContent =
-                "Alarm running - keep this tab open. " +
-                "Locking the phone is fine.";
+                blob = fixResult.blob;
+            }
 
-        } catch (error) {
+        } catch (fixError) {
 
-            console.error(error);
-
-            alarmRunning = false;
-
-            startButton.disabled = false;
-            stopButton.disabled = true;
-            generateButton.disabled = false;
+            console.error(fixError);
+        }
 
 
-            status.textContent =
-                "Unable to start playback: " + error.message;
+        status.textContent = "Verifying...";
+
+        const url =
+            URL.createObjectURL(blob);
+
+        await verifyGeneratedAudio(url);
+
+        generatedURL = url;
+        generatedVerified = true;
+
+        status.textContent =
+            "Ready - tap Start Alarm again to begin.";
+
+        setAlarmState("ready");
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        invalidateGeneratedAlarm();
+
+        status.textContent =
+            "Couldn't generate the alarm: " + error.message;
+
+        setAlarmState("idle");
+
+    } finally {
+
+        stopGenerationContext();
+    }
+}
+
+
+async function beginPlayback() {
+
+    if (!generatedURL || !generatedVerified) {
+
+        status.textContent = "Generate the alarm first.";
+
+        setAlarmState("idle");
+
+        return;
+    }
+
+
+    stopCurrentPreview();
+
+
+    try {
+
+        player.currentTime = 0;
+
+        await player.play();
+
+        setAlarmState("playing");
+
+        status.textContent =
+            "Alarm running - keep this tab open. " +
+            "Locking the phone is fine.";
+
+    } catch (error) {
+
+        console.error(error);
+
+        status.textContent =
+            "Couldn't start playback: " + error.message;
+    }
+}
+
+
+actionButton.addEventListener(
+    "click",
+    () => {
+
+        if (alarmState === "idle") {
+
+            startGeneration();
+
+        } else if (alarmState === "ready") {
+
+            beginPlayback();
         }
     }
 );
@@ -4274,61 +3534,47 @@ stopButton.addEventListener(
     "click",
     () => {
 
-        if (alarmRunning) {
+        if (alarmState === "playing") {
 
             player.pause();
 
             player.currentTime = 0;
 
-            alarmRunning = false;
+            status.textContent = "Alarm stopped.";
 
-            startButton.disabled =
-                !(generatedURL && generatedVerified);
+        } else if (alarmState === "generating") {
 
-            stopButton.disabled = true;
+            status.textContent = "Generation stopped.";
 
-            generateButton.disabled = false;
+        } else {
 
-            status.textContent =
-                "Alarm stopped.";
+            status.textContent = "Ready.";
         }
 
 
         stopGenerationContext();
 
+        invalidateGeneratedAlarm();
 
-        generateButton.disabled = false;
+        setAlarmState("idle");
     }
 );
 
-
-/* ========================================================
-   PLAYER EVENTS
-   ======================================================== */
 
 player.addEventListener(
     "timeupdate",
     () => {
 
-        if (!player.duration) {
+        if (!player.duration || alarmState !== "playing") {
             return;
         }
 
-
-        progress.style.display =
-            "block";
-
+        progress.style.display = "block";
 
         const percentage =
-            (
-                player.currentTime /
-                player.duration
-            ) * 100;
+            (player.currentTime / player.duration) * 100;
 
-
-        progressFill.style.width =
-            `${percentage}%`;
-
+        progressFill.style.width = `${percentage}%`;
 
         progressText.textContent =
             `${formatDuration(player.currentTime)} / ` +
@@ -4341,19 +3587,11 @@ player.addEventListener(
     "ended",
     () => {
 
-        alarmRunning = false;
+        status.textContent = "Alarm finished.";
 
-        startButton.disabled =
-            !(generatedURL && generatedVerified);
+        invalidateGeneratedAlarm();
 
-        stopButton.disabled = true;
-
-        generateButton.disabled = false;
-
-        progressFill.style.width = "100%";
-
-        status.textContent =
-            "Alarm finished.";
+        setAlarmState("idle");
     }
 );
 
@@ -4366,7 +3604,8 @@ loadSounds();
 
 updateAddAlarmButtonState();
 
-testAudioCapabilities();
+setAlarmState("idle");
+
 
 
 </script>
