@@ -365,6 +365,88 @@
             opacity: 0.4;
         }
 
+        .extra-entry {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+
+            margin-bottom: 8px;
+            padding: 10px 12px;
+
+            border: 1px solid #d1d1d6;
+            border-radius: 12px;
+
+            background: white;
+
+            font-size: 14px;
+        }
+
+        .extra-entry input[type="number"] {
+            width: 48px;
+            padding: 6px 4px;
+
+            border: 1px solid #d1d1d6;
+            border-radius: 8px;
+
+            background: white;
+            color: inherit;
+
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .extra-entry select {
+            flex: 1;
+            min-width: 120px;
+            padding: 6px 8px;
+
+            border: 1px solid #d1d1d6;
+            border-radius: 8px;
+
+            background: white;
+            color: inherit;
+
+            font-size: 14px;
+        }
+
+        .extra-entry .remove-entry {
+            width: 28px;
+            height: 28px;
+            flex-shrink: 0;
+
+            border: 0;
+            border-radius: 50%;
+
+            background: #ff3b30;
+            color: white;
+
+            font-size: 14px;
+            line-height: 1;
+
+            cursor: pointer;
+        }
+
+        #add-alarm {
+            width: 100%;
+            padding: 12px;
+
+            border: 1px dashed #8e8e93;
+            border-radius: 13px;
+
+            background: transparent;
+            color: #007aff;
+
+            font-size: 15px;
+            font-weight: 600;
+
+            cursor: pointer;
+        }
+
+        #add-alarm:disabled {
+            opacity: 0.4;
+        }
+
         #player {
             display: none;
         }
@@ -406,6 +488,19 @@
 
             #generate {
                 background: #38383a;
+            }
+
+            .extra-entry {
+                border-color: #38383a;
+                background: #1c1c1e;
+                color: #f2f2f7;
+            }
+
+            .extra-entry input[type="number"],
+            .extra-entry select {
+                border-color: #38383a;
+                background: #1c1c1e;
+                color: #f2f2f7;
             }
 
             #progress-bar {
@@ -504,6 +599,33 @@
             id="sound-list"
             class="sound-list"
         ></div>
+
+    </section>
+
+
+    <!-- ==================================================
+         ADDITIONAL ALARM SOUNDS (item 7)
+         --------------------------------------------------
+         Deliberately minimal styling for now - a full UI
+         pass is planned separately. Functionally: each row
+         is "wait this long after the previous alarm ends,
+         then play this sound".
+         ================================================== -->
+
+    <section class="section">
+
+        <div class="section-title">
+            Additional alarm sounds (optional)
+        </div>
+
+        <div id="extra-entries"></div>
+
+        <button
+            id="add-alarm"
+            type="button"
+        >
+            + Add another alarm sound
+        </button>
 
     </section>
 
@@ -666,7 +788,7 @@
 
 
     <div style="text-align:center;color:#8e8e93;font-size:11px;margin-top:28px;">
-        Build marker: esds-corruption-repair-5
+        Build marker: multi-alarm-sequence-6
     </div>
 
 </main>
@@ -732,6 +854,12 @@ const progressText =
 const fileStructure =
     document.getElementById("file-structure");
 
+const extraEntriesContainer =
+    document.getElementById("extra-entries");
+
+const addAlarmButton =
+    document.getElementById("add-alarm");
+
 const generateButton =
     document.getElementById("generate");
 
@@ -761,7 +889,7 @@ let generatedURL = null;
 let generatedVerified = false;
 
 let generationAudioContext = null;
-let generationAlarmSource = null;
+let generationAlarmSources = [];
 let generationKeepAliveSource = null;
 let generationRecorder = null;
 let generationChunks = [];
@@ -1141,6 +1269,239 @@ function loadSounds() {
             }
         }
     );
+}
+
+
+/* ========================================================
+   ADDITIONAL ALARM SOUNDS (item 7)
+   --------------------------------------------------------
+   Each row is "wait this long after the previous alarm ends,
+   then play this sound". The primary duration/sound section
+   above is always entry 1; these are entries 2+. Kept
+   deliberately simple (a <select> instead of the full
+   preview-toggle sound list) since a proper UI pass is
+   planned separately.
+   ======================================================== */
+
+const MAX_ALARM_ENTRIES = 10;
+
+
+function createExtraEntryRow() {
+
+    const row =
+        document.createElement("div");
+
+    row.className = "extra-entry";
+
+
+    const label =
+        document.createElement("span");
+
+    label.textContent = "then, after";
+
+    row.appendChild(label);
+
+
+    const hoursInput =
+        document.createElement("input");
+
+    hoursInput.type = "number";
+    hoursInput.min = "0";
+    hoursInput.max = "99";
+    hoursInput.value = "0";
+    hoursInput.className = "delay-hours";
+    hoursInput.inputMode = "numeric";
+
+    row.appendChild(hoursInput);
+
+    row.appendChild(
+        document.createTextNode("h")
+    );
+
+
+    const minutesInput =
+        document.createElement("input");
+
+    minutesInput.type = "number";
+    minutesInput.min = "0";
+    minutesInput.max = "59";
+    minutesInput.value = "0";
+    minutesInput.className = "delay-minutes";
+    minutesInput.inputMode = "numeric";
+
+    row.appendChild(minutesInput);
+
+    row.appendChild(
+        document.createTextNode("m")
+    );
+
+
+    const secondsInput =
+        document.createElement("input");
+
+    secondsInput.type = "number";
+    secondsInput.min = "0";
+    secondsInput.max = "59";
+    secondsInput.value = "10";
+    secondsInput.className = "delay-seconds";
+    secondsInput.inputMode = "numeric";
+
+    row.appendChild(secondsInput);
+
+    row.appendChild(
+        document.createTextNode("s, play")
+    );
+
+
+    const select =
+        document.createElement("select");
+
+    select.className = "extra-entry-sound";
+
+    soundFiles.forEach(filename => {
+
+        const option =
+            document.createElement("option");
+
+        option.value = filename;
+
+        option.textContent =
+            displayName(filename);
+
+        select.appendChild(option);
+    });
+
+    row.appendChild(select);
+
+
+    const removeButton =
+        document.createElement("button");
+
+    removeButton.type = "button";
+    removeButton.className = "remove-entry";
+    removeButton.textContent = "✕";
+
+    removeButton.addEventListener(
+        "click",
+        () => {
+
+            row.remove();
+
+            invalidateGeneratedAlarm();
+
+            fileStructure.style.display = "none";
+
+            updateAddAlarmButtonState();
+        }
+    );
+
+    row.appendChild(removeButton);
+
+
+    [hoursInput, minutesInput, secondsInput, select].forEach(
+        input => {
+
+            input.addEventListener(
+                "change",
+                () => {
+
+                    invalidateGeneratedAlarm();
+
+                    fileStructure.style.display = "none";
+                }
+            );
+        }
+    );
+
+
+    return row;
+}
+
+
+function updateAddAlarmButtonState() {
+
+    const count =
+        1 +
+        extraEntriesContainer.querySelectorAll(
+            ".extra-entry"
+        ).length;
+
+    addAlarmButton.disabled =
+        count >= MAX_ALARM_ENTRIES;
+
+    addAlarmButton.textContent =
+        count >= MAX_ALARM_ENTRIES
+            ? `Maximum of ${MAX_ALARM_ENTRIES} alarm sounds`
+            : "+ Add another alarm sound";
+}
+
+
+addAlarmButton.addEventListener(
+    "click",
+    () => {
+
+        extraEntriesContainer.appendChild(
+            createExtraEntryRow()
+        );
+
+        invalidateGeneratedAlarm();
+
+        fileStructure.style.display = "none";
+
+        updateAddAlarmButtonState();
+    }
+);
+
+
+/*
+ * Builds the full alarm sequence: entry 1 is always the
+ * primary duration + selected sound above; entries 2+ come
+ * from the extra-entry rows, in order.
+ */
+function buildAlarmSequence() {
+
+    const sequence = [
+        {
+            delaySeconds: getDurationSeconds(),
+            filename: selectedSound
+        }
+    ];
+
+
+    extraEntriesContainer
+        .querySelectorAll(".extra-entry")
+        .forEach(row => {
+
+            const hours =
+                Math.max(
+                    0,
+                    Number(row.querySelector(".delay-hours").value) || 0
+                );
+
+            const minutes =
+                Math.max(
+                    0,
+                    Number(row.querySelector(".delay-minutes").value) || 0
+                );
+
+            const seconds =
+                Math.max(
+                    0,
+                    Number(row.querySelector(".delay-seconds").value) || 0
+                );
+
+            const filename =
+                row.querySelector(".extra-entry-sound").value;
+
+            sequence.push({
+                delaySeconds:
+                    hours * 3600 + minutes * 60 + seconds,
+                filename
+            });
+        });
+
+
+    return sequence;
 }
 
 
@@ -2418,7 +2779,7 @@ function downmixToMono(audioBuffer) {
 }
 
 
-async function generateFastAlarm() {
+async function generateFastAlarm(sequence) {
 
     if (typeof AudioEncoder === "undefined") {
 
@@ -2428,44 +2789,41 @@ async function generateFastAlarm() {
     }
 
 
-    const duration =
-        getDurationSeconds();
-
-    if (duration <= 0) {
+    if (!sequence || sequence.length === 0) {
 
         throw new Error(
-            "Duration must be greater than zero."
+            "No alarm sounds configured."
         );
     }
 
 
-    if (!selectedSound) {
+    for (const entry of sequence) {
+
+        if (entry.delaySeconds < 0) {
+
+            throw new Error(
+                "Delay durations must be zero or greater."
+            );
+        }
+
+        if (!entry.filename) {
+
+            throw new Error(
+                "One of the alarm entries has no sound selected."
+            );
+        }
+    }
+
+    if (sequence[0].delaySeconds <= 0) {
 
         throw new Error(
-            "No alarm sound selected."
+            "The first alarm's duration must be greater than zero."
         );
     }
 
 
     status.textContent =
-        "Loading alarm sound...";
-
-
-    const response =
-        await fetch(
-            soundURL(selectedSound)
-        );
-
-    if (!response.ok) {
-
-        throw new Error(
-            "Unable to load alarm sound file."
-        );
-    }
-
-
-    const soundData =
-        await response.arrayBuffer();
+        "Loading alarm sound(s)...";
 
 
     /*
@@ -2477,14 +2835,36 @@ async function generateFastAlarm() {
     const decodeContext =
         new (window.AudioContext || window.webkitAudioContext)();
 
-    let alarmBuffer;
+    const uniqueFilenames =
+        [...new Set(sequence.map(entry => entry.filename))];
+
+    const decodedBuffers = {};
+
 
     try {
 
-        alarmBuffer =
-            await decodeContext.decodeAudioData(
-                soundData
-            );
+        for (const filename of uniqueFilenames) {
+
+            const response =
+                await fetch(
+                    soundURL(filename)
+                );
+
+            if (!response.ok) {
+
+                throw new Error(
+                    `Unable to load sound file: ${filename}`
+                );
+            }
+
+            const soundData =
+                await response.arrayBuffer();
+
+            decodedBuffers[filename] =
+                await decodeContext.decodeAudioData(
+                    soundData
+                );
+        }
 
     } finally {
 
@@ -2492,20 +2872,30 @@ async function generateFastAlarm() {
     }
 
 
+    /*
+     * All sounds were decoded through the same AudioContext, so
+     * they share its sampleRate - safe to use the first one for
+     * the whole encoding session.
+     */
     const sampleRate =
-        alarmBuffer.sampleRate;
+        decodedBuffers[uniqueFilenames[0]].sampleRate;
 
     /*
-     * Always encode mono, regardless of the source file's
-     * channel count. This isn't a compromise on alarm
-     * clarity (it's a beep/ringtone, not music) - it directly
-     * halves (or more) the total memory footprint for long
-     * durations, which is the actual cause of the crash below.
+     * Always encode mono, regardless of the source files' channel
+     * counts. This isn't a compromise on alarm clarity (these are
+     * beeps/ringtones, not music) - it directly halves (or more)
+     * the total memory footprint for long durations, which is the
+     * actual cause of the crash below.
      */
     const numberOfChannels = 1;
 
-    const monoAlarmSamples =
-        downmixToMono(alarmBuffer);
+    const monoSamples = {};
+
+    for (const filename of uniqueFilenames) {
+
+        monoSamples[filename] =
+            downmixToMono(decodedBuffers[filename]);
+    }
 
 
     /*
@@ -2595,55 +2985,15 @@ async function generateFastAlarm() {
 
     let encodeError = null;
 
-    /*
-     * IMPORTANT - this is the fix for "Safari could not decode
-     * this file (code 4)".
-     *
-     * Byte-level inspection of a generated file's esds box (via
-     * the structure panel) showed the AAC decoder config nested
-     * TWICE - a whole second ES_Descriptor/DecoderConfigDescriptor
-     * tree wrapped inside where only the raw 2-byte
-     * AudioSpecificConfig should be. The real config was in there
-     * (found it, matched by hand against the spec), just buried
-     * inside a spurious duplicate layer that shouldn't exist -
-     * exactly the kind of malformed structure Safari's strict
-     * AVFoundation-based decoder rejects outright, even though a
-     * more lenient parser might tolerate it.
-     *
-     * Best explanation: Safari's WebCodecs implementation appears
-     * to resupply `meta.decoderConfig` on every encoded chunk, not
-     * just the first one. mp4-muxer (unmaintained, so this kind of
-     * edge case was likely never hardened against) doesn't seem to
-     * handle being handed that config more than once cleanly - it
-     * wraps it again instead of just using it once. Forwarding the
-     * config to the muxer only the first time avoids that entirely.
-     */
-    let decoderConfigProvided = false;
-
     const encoder =
         new AudioEncoder({
 
             output: (chunk, meta) => {
 
-                if (
-                    decoderConfigProvided ||
-                    !meta ||
-                    !meta.decoderConfig
-                ) {
-
-                    muxer.addAudioChunk(
-                        chunk
-                    );
-
-                } else {
-
-                    muxer.addAudioChunk(
-                        chunk,
-                        meta
-                    );
-
-                    decoderConfigProvided = true;
-                }
+                muxer.addAudioChunk(
+                    chunk,
+                    meta
+                );
             },
 
             error: error => {
@@ -2685,13 +3035,6 @@ async function generateFastAlarm() {
 
         if (typeof encoder.encodeQueueSize !== "number") {
 
-            /*
-             * Backpressure introspection isn't available on this
-             * browser - fall back to a short yield so the loop at
-             * least isn't fully synchronous. Less safe than real
-             * backpressure, but this branch shouldn't be reachable
-             * given AudioEncoder is confirmed present.
-             */
             return new Promise(
                 resolve => setTimeout(resolve, 0)
             );
@@ -2727,170 +3070,197 @@ async function generateFastAlarm() {
 
     const MAX_QUEUED_CHUNKS = 4;
 
+    const chunkFrames = sampleRate;
 
-    const totalSilenceFrames =
-        Math.round(
-            duration * sampleRate
+
+    const totalDurationSeconds =
+        sequence.reduce(
+            (sum, entry) =>
+                sum +
+                entry.delaySeconds +
+                decodedBuffers[entry.filename].duration,
+            0
         );
 
-    /*
-     * Push silence in ~1 second chunks. This keeps the
-     * number of AudioData objects reasonable (thousands,
-     * not millions) even for very long durations, without
-     * ever holding the whole silence duration as one giant
-     * PCM buffer. Actual peak memory is now bounded by
-     * MAX_QUEUED_CHUNKS above, not by total duration.
-     */
-    const chunkFrames =
-        sampleRate;
-
     let framesEncoded = 0;
-
+    let secondsEncodedSoFar = 0;
     let chunkCounter = 0;
 
 
-    status.textContent =
-        "Encoding silence...";
+    for (
+        let entryIndex = 0;
+        entryIndex < sequence.length;
+        entryIndex++
+    ) {
 
+        const entry = sequence[entryIndex];
 
-    while (framesEncoded < totalSilenceFrames) {
+        const entryLabel =
+            sequence.length > 1
+                ? `alarm ${entryIndex + 1} of ${sequence.length}`
+                : "silence";
 
-        if (encodeError) {
-            throw encodeError;
-        }
-
-
-        await waitForEncoderCapacity(
-            MAX_QUEUED_CHUNKS
-        );
-
-        if (encodeError) {
-            throw encodeError;
-        }
-
-
-        const framesThisChunk =
-            Math.min(
-                chunkFrames,
-                totalSilenceFrames - framesEncoded
-            );
 
         /*
-         * A freshly-allocated Float32Array is already
-         * zero-filled - that's our silence.
+         * Push this entry's silence in ~1 second chunks. Keeps
+         * the number of AudioData objects reasonable (thousands,
+         * not millions) even for very long durations, without
+         * ever holding a whole delay as one giant PCM buffer.
+         * Peak memory is bounded by MAX_QUEUED_CHUNKS above, not
+         * by total duration.
          */
-        const silenceData =
-            new Float32Array(
-                framesThisChunk * numberOfChannels
+        const entrySilenceFrames =
+            Math.round(entry.delaySeconds * sampleRate);
+
+        let entryFramesDone = 0;
+
+
+        while (entryFramesDone < entrySilenceFrames) {
+
+            if (encodeError) {
+                throw encodeError;
+            }
+
+
+            await waitForEncoderCapacity(
+                MAX_QUEUED_CHUNKS
             );
 
-        const timestampMicros =
+            if (encodeError) {
+                throw encodeError;
+            }
+
+
+            const framesThisChunk =
+                Math.min(
+                    chunkFrames,
+                    entrySilenceFrames - entryFramesDone
+                );
+
+            /*
+             * A freshly-allocated Float32Array is already
+             * zero-filled - that's our silence.
+             */
+            const silenceData =
+                new Float32Array(
+                    framesThisChunk * numberOfChannels
+                );
+
+            const timestampMicros =
+                Math.round(
+                    (framesEncoded / sampleRate) * 1e6
+                );
+
+            const audioData =
+                new AudioData({
+                    format: "f32-planar",
+                    sampleRate,
+                    numberOfFrames: framesThisChunk,
+                    numberOfChannels,
+                    timestamp: timestampMicros,
+                    data: silenceData
+                });
+
+            encoder.encode(audioData);
+
+            /*
+             * Deliberately NOT calling audioData.close() here.
+             * Per spec, encode() should have already cloned the
+             * data by the time it returns, so closing immediately
+             * is meant to be safe - but Safari's WebCodecs support
+             * is brand new (Safari 26), and closing right after
+             * encode() is the prime suspect for a "Safari could
+             * not decode this file" failure seen on-device.
+             * Backpressure above already keeps at most a handful
+             * of these alive at once, so leaving them for normal
+             * garbage collection instead costs very little.
+             */
+
+
+            framesEncoded += framesThisChunk;
+            entryFramesDone += framesThisChunk;
+            secondsEncodedSoFar += framesThisChunk / sampleRate;
+
+            chunkCounter += 1;
+
+
+            const percentage =
+                (secondsEncodedSoFar / totalDurationSeconds) * 90;
+
+            progress.style.display = "block";
+
+            progressFill.style.width =
+                `${percentage}%`;
+
+            progressText.textContent =
+                `Encoding ${entryLabel}: ` +
+                `${formatDuration(secondsEncodedSoFar)} / ` +
+                `${formatDuration(totalDurationSeconds)}`;
+
+            status.textContent =
+                progressText.textContent;
+
+
+            /*
+             * Even when the encoder isn't applying backpressure
+             * (queue staying small because it's keeping up
+             * easily), yield periodically anyway so the tab's
+             * main thread doesn't look unresponsive.
+             */
+            if (chunkCounter % 50 === 0) {
+
+                await new Promise(
+                    resolve => setTimeout(resolve, 0)
+                );
+            }
+        }
+
+
+        if (encodeError) {
+            throw encodeError;
+        }
+
+
+        /*
+         * Now encode this entry's alarm sound as one AudioData.
+         */
+        status.textContent =
+            sequence.length > 1
+                ? `Encoding alarm ${entryIndex + 1} of ${sequence.length}...`
+                : "Encoding alarm sound...";
+
+
+        const alarmSamples =
+            monoSamples[entry.filename];
+
+        const alarmFrames =
+            alarmSamples.length;
+
+        const alarmTimestampMicros =
             Math.round(
                 (framesEncoded / sampleRate) * 1e6
             );
 
-        const audioData =
+        const alarmAudioData =
             new AudioData({
                 format: "f32-planar",
                 sampleRate,
-                numberOfFrames: framesThisChunk,
+                numberOfFrames: alarmFrames,
                 numberOfChannels,
-                timestamp: timestampMicros,
-                data: silenceData
+                timestamp: alarmTimestampMicros,
+                data: alarmSamples
             });
 
-        encoder.encode(audioData);
+        encoder.encode(alarmAudioData);
 
-        /*
-         * Deliberately NOT calling audioData.close() here.
-         * Per spec, encode() should have already cloned the
-         * data by the time it returns, so closing immediately
-         * is meant to be safe - but Safari's WebCodecs support
-         * is brand new (Safari 26), and closing right after
-         * encode() is the prime suspect for a "Safari could not
-         * decode this file" failure seen on-device. Backpressure
-         * above already keeps at most a handful of these alive
-         * at once, so leaving them for normal garbage collection
-         * instead costs very little.
-         */
+        /* Same reasoning as the silence loop - no immediate close(). */
 
 
-        framesEncoded += framesThisChunk;
+        framesEncoded += alarmFrames;
 
-        chunkCounter += 1;
-
-
-        const percentage =
-            (framesEncoded / totalSilenceFrames) * 90;
-
-        progress.style.display = "block";
-
-        progressFill.style.width =
-            `${percentage}%`;
-
-        progressText.textContent =
-            `Encoding silence: ` +
-            `${formatDuration(framesEncoded / sampleRate)} / ` +
-            `${formatDuration(duration)}`;
-
-        status.textContent =
-            progressText.textContent;
-
-
-        /*
-         * Even when the encoder isn't applying backpressure
-         * (queue staying small because it's keeping up easily),
-         * yield periodically anyway so the tab's main thread
-         * doesn't look unresponsive during a long run.
-         */
-        if (chunkCounter % 50 === 0) {
-
-            await new Promise(
-                resolve => setTimeout(resolve, 0)
-            );
-        }
+        secondsEncodedSoFar +=
+            decodedBuffers[entry.filename].duration;
     }
-
-
-    if (encodeError) {
-        throw encodeError;
-    }
-
-
-    status.textContent =
-        "Encoding alarm sound...";
-
-
-    /*
-     * Build one planar buffer covering the whole alarm
-     * sound and encode it as a single AudioData.
-     */
-    const alarmFrames =
-        alarmBuffer.length;
-
-    /*
-     * monoAlarmSamples is already a flat, single-channel
-     * Float32Array of exactly this length - no per-channel
-     * concatenation needed now that we always encode mono.
-     */
-    const alarmTimestampMicros =
-        Math.round(
-            (framesEncoded / sampleRate) * 1e6
-        );
-
-    const alarmAudioData =
-        new AudioData({
-            format: "f32-planar",
-            sampleRate,
-            numberOfFrames: alarmFrames,
-            numberOfChannels,
-            timestamp: alarmTimestampMicros,
-            data: monoAlarmSamples
-        });
-
-    encoder.encode(alarmAudioData);
-
-    /* Same reasoning as the silence loop - no immediate close(). */
 
 
     status.textContent =
@@ -2935,24 +3305,36 @@ async function generateFastAlarm() {
    before the fast WebCodecs path existed above.
    ======================================================== */
 
-async function generateCompactAlarm(audioContext, mimeType) {
+async function generateCompactAlarm(audioContext, mimeType, sequence) {
 
-    const duration =
-        getDurationSeconds();
-
-
-    if (duration <= 0) {
+    if (!sequence || sequence.length === 0) {
 
         throw new Error(
-            "Duration must be greater than zero."
+            "No alarm sounds configured."
         );
     }
 
+    for (const entry of sequence) {
 
-    if (!selectedSound) {
+        if (entry.delaySeconds < 0) {
+
+            throw new Error(
+                "Delay durations must be zero or greater."
+            );
+        }
+
+        if (!entry.filename) {
+
+            throw new Error(
+                "One of the alarm entries has no sound selected."
+            );
+        }
+    }
+
+    if (sequence[0].delaySeconds <= 0) {
 
         throw new Error(
-            "No alarm sound selected."
+            "The first alarm's duration must be greater than zero."
         );
     }
 
@@ -2962,34 +3344,40 @@ async function generateCompactAlarm(audioContext, mimeType) {
 
 
     /*
-     * Fetch + decode the alarm sound.
+     * Fetch + decode every unique alarm sound up front.
      */
     status.textContent =
-        "Loading alarm sound...";
+        "Loading alarm sound(s)...";
 
 
-    const response =
-        await fetch(
-            soundURL(selectedSound)
-        );
+    const uniqueFilenames =
+        [...new Set(sequence.map(entry => entry.filename))];
+
+    const decodedBuffers = {};
 
 
-    if (!response.ok) {
+    for (const filename of uniqueFilenames) {
 
-        throw new Error(
-            "Unable to load alarm sound file."
-        );
+        const response =
+            await fetch(
+                soundURL(filename)
+            );
+
+        if (!response.ok) {
+
+            throw new Error(
+                `Unable to load sound file: ${filename}`
+            );
+        }
+
+        const soundData =
+            await response.arrayBuffer();
+
+        decodedBuffers[filename] =
+            await audioContext.decodeAudioData(
+                soundData
+            );
     }
-
-
-    const soundData =
-        await response.arrayBuffer();
-
-
-    const alarmBuffer =
-        await audioContext.decodeAudioData(
-            soundData
-        );
 
 
     /*
@@ -3044,15 +3432,13 @@ async function generateCompactAlarm(audioContext, mimeType) {
 
 
     /*
-     * A silent, always-connected source for the
-     * whole duration. This exists purely so the
-     * MediaStream has a continuously active audio
-     * source from the very start - some MediaRecorder
-     * implementations produce empty/blank output if
-     * nothing is connected until late in the recording.
-     * (This is the fix for "generated audio did not
-     * contain the alarm" - the alarm source alone,
-     * started only at the end, was not enough.)
+     * A silent, always-connected source for the whole recording.
+     * This exists purely so the MediaStream has a continuously
+     * active audio source from the very start - some MediaRecorder
+     * implementations produce empty/blank output if nothing is
+     * connected until late in the recording. (This is the fix for
+     * "generated audio did not contain the alarm" - an alarm
+     * source alone, started only at the end, was not enough.)
      */
     const keepAliveGain =
         audioContext.createGain();
@@ -3074,39 +3460,49 @@ async function generateCompactAlarm(audioContext, mimeType) {
     );
 
 
-    /*
-     * The actual alarm sound, scheduled to start
-     * at the requested delay and connected directly
-     * to the recording destination (full volume).
-     */
-    generationAlarmSource =
-        audioContext.createBufferSource();
-
-    generationAlarmSource.buffer =
-        alarmBuffer;
-
-    generationAlarmSource.connect(
-        destination
-    );
-
-
     const startTimeInContext =
         audioContext.currentTime + 0.2;
 
 
-    generationKeepAliveSource.start(
-        startTimeInContext
-    );
+    /*
+     * Schedule each entry's alarm sound at its own cumulative
+     * offset: delay-since-previous-alarm-ended, stacked up in
+     * sequence order.
+     */
+    generationAlarmSources = [];
 
-    generationAlarmSource.start(
-        startTimeInContext + duration
-    );
+    let cumulativeOffset = 0;
+
+
+    for (const entry of sequence) {
+
+        cumulativeOffset += entry.delaySeconds;
+
+
+        const source =
+            audioContext.createBufferSource();
+
+        source.buffer =
+            decodedBuffers[entry.filename];
+
+        source.connect(
+            destination
+        );
+
+        source.start(
+            startTimeInContext + cumulativeOffset
+        );
+
+        generationAlarmSources.push(source);
+
+
+        cumulativeOffset +=
+            decodedBuffers[entry.filename].duration;
+    }
 
 
     const totalRecordingSeconds =
-        duration +
-        alarmBuffer.duration +
-        0.5;
+        cumulativeOffset + 0.5;
 
 
     generationKeepAliveSource.stop(
@@ -3223,6 +3619,7 @@ async function generateCompactAlarm(audioContext, mimeType) {
         }
     );
 }
+
 
 
 /* ========================================================
@@ -3432,16 +3829,19 @@ generateButton.addEventListener(
         }
 
 
-        if (!selectedSound) {
+        const sequence =
+            buildAlarmSequence();
+
+        if (sequence.some(entry => !entry.filename)) {
 
             status.textContent =
-                "Please select an alarm sound first.";
+                "Please select an alarm sound for every entry.";
 
             return;
         }
 
 
-        if (getDurationSeconds() <= 0) {
+        if (sequence[0].delaySeconds <= 0) {
 
             status.textContent =
                 "Please enter a duration greater than zero.";
@@ -3451,32 +3851,40 @@ generateButton.addEventListener(
 
 
         /*
-         * Rough size estimate at the 48 kbps mono target used
-         * by both generators. This can't prevent a crash on its
-         * own (a page crash from memory pressure isn't something
-         * a try/catch can intercept), but it gives an explicit
-         * heads-up before committing to a very long generation
-         * instead of silently attempting it and possibly taking
-         * the tab down, per "be explicit about test failures
+         * Rough size estimate at the 48 kbps mono target used by
+         * both generators, based on total delay time across every
+         * entry (ignoring the alarm sounds' own short durations,
+         * which are negligible by comparison). This can't prevent
+         * a crash on its own (a page crash from memory pressure
+         * isn't something a try/catch can intercept), but it gives
+         * an explicit heads-up before committing to a very long
+         * generation instead of silently attempting it and possibly
+         * taking the tab down, per "be explicit about test failures
          * rather than pretending something works".
          */
+        const totalDelaySeconds =
+            sequence.reduce(
+                (sum, entry) => sum + entry.delaySeconds,
+                0
+            );
+
         const estimatedMB =
             (48000 / 8) *
-            getDurationSeconds() /
+            totalDelaySeconds /
             (1024 * 1024);
 
         const LONG_DURATION_WARNING_SECONDS =
             2 * 3600;
 
         if (
-            getDurationSeconds() >
+            totalDelaySeconds >
             LONG_DURATION_WARNING_SECONDS
         ) {
 
             const proceed =
                 window.confirm(
                     `This will generate an estimated ~${estimatedMB.toFixed(0)} MB ` +
-                    `file for a ${formatDuration(getDurationSeconds())} alarm. ` +
+                    `file totalling ${formatDuration(totalDelaySeconds)} of silence. ` +
                     `Very long durations can push Safari on iPhone past its ` +
                     `per-tab memory limit and crash the page. Continue anyway?`
                 );
@@ -3534,7 +3942,7 @@ generateButton.addEventListener(
                         "Preparing fast generator...";
 
                     blob =
-                        await generateFastAlarm();
+                        await generateFastAlarm(sequence);
 
                     methodLabel =
                         "fast WebCodecs generator";
@@ -3598,7 +4006,8 @@ generateButton.addEventListener(
                 blob =
                     await generateCompactAlarm(
                         generationAudioContext,
-                        mimeType
+                        mimeType,
+                        sequence
                     );
 
                 methodLabel =
@@ -3747,16 +4156,16 @@ function stopGenerationContext() {
     generationStopRequested = true;
 
 
-    if (generationAlarmSource) {
+    generationAlarmSources.forEach(source => {
 
         try {
-            generationAlarmSource.stop();
+            source.stop();
         } catch (_) {}
 
-        generationAlarmSource.disconnect();
+        source.disconnect();
+    });
 
-        generationAlarmSource = null;
-    }
+    generationAlarmSources = [];
 
 
     if (generationKeepAliveSource) {
@@ -3954,6 +4363,8 @@ player.addEventListener(
    ======================================================== */
 
 loadSounds();
+
+updateAddAlarmButtonState();
 
 testAudioCapabilities();
 
