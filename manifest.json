@@ -1,0 +1,11 @@
+{
+    "name": "Private Alarm",
+    "short_name": "Alarm",
+    "description": "A private alarm that plays through connected headphones after a silent delay.",
+    "start_url": ".",
+    "scope": ".",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#1c1c3a",
+    "theme_color": "#1c1c3a"
+}
