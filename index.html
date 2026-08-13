@@ -10,6 +10,14 @@
 
     <title>Private Alarm</title>
 
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1c1c3a">
+
+    <!-- iOS "Add to Home Screen" support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Alarm">
+
     <style>
         * {
             box-sizing: border-box;
@@ -60,6 +68,41 @@
             font-size: 14px;
             line-height: 1.4;
             text-align: center;
+        }
+
+        #offline-status {
+            display: inline-block;
+            width: 100%;
+            margin: -8px 0 22px;
+            padding: 9px 14px;
+
+            border: 0;
+            border-radius: 12px;
+
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+
+            appearance: none;
+            -webkit-appearance: none;
+
+            cursor: pointer;
+        }
+
+        #offline-status.checking {
+            background: #e5e5ea;
+            color: #6e6e73;
+        }
+
+        #offline-status.good {
+            background: rgba(52, 199, 89, 0.15);
+            color: #248a3d;
+        }
+
+        #offline-status.bad {
+            background: rgba(255, 59, 48, 0.15);
+            color: #d70015;
         }
 
         .section {
@@ -501,6 +544,21 @@
                 color: #98989d;
             }
 
+            #offline-status.checking {
+                background: #1c1c1e;
+                color: #98989d;
+            }
+
+            #offline-status.good {
+                background: rgba(52, 199, 89, 0.2);
+                color: #32d74b;
+            }
+
+            #offline-status.bad {
+                background: rgba(255, 69, 58, 0.2);
+                color: #ff6961;
+            }
+
             .tabs {
                 background: #1c1c1e;
             }
@@ -562,6 +620,14 @@
     <p class="subtitle">
         Play an alarm privately through your connected headphones.
     </p>
+
+    <button
+        id="offline-status"
+        class="checking"
+        type="button"
+    >
+        Checking offline readiness...
+    </button>
 
 
     <!-- ==================================================
@@ -744,6 +810,192 @@ const soundFiles = [
     "ringtone.mp3",
     "timer_alarm.mp3",
 ];
+
+
+/* ========================================================
+   OFFLINE / PWA SUPPORT
+   --------------------------------------------------------
+   This block is intentionally self-contained and doesn't
+   touch the audio-generation architecture at all - it only
+   registers the service worker and verifies/repairs what it
+   cached. See sw.js for the actual caching logic.
+
+   IMPORTANT: CACHE_NAME and MP4_MUXER_URL below MUST match
+   the same constants in sw.js - they're duplicated because a
+   page script and a service worker can't share JS state
+   directly. If you bump the cache version or change the CDN
+   URL in one, update the other.
+   ======================================================== */
+
+const OFFLINE_CACHE_NAME = "alarm-app-v1";
+
+const OFFLINE_MP4_MUXER_URL =
+    "https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.mjs";
+
+function getRequiredOfflineAssets() {
+
+    return [
+        "index.html",
+        "manifest.json",
+        ...soundFiles.map(name => `sounds/${name}`),
+        OFFLINE_MP4_MUXER_URL
+    ];
+}
+
+
+if ("serviceWorker" in navigator) {
+
+    navigator.serviceWorker
+        .register("sw.js")
+        .catch(error => {
+
+            console.error(
+                "Service worker registration failed:",
+                error
+            );
+        });
+}
+
+
+/*
+ * Checks whether every required asset is actually present in the
+ * cache (not just "a service worker is registered" - that alone
+ * doesn't prove caching succeeded), and attempts to fetch+cache
+ * anything that's missing. Only re-downloads what's actually
+ * absent, so re-running this after a successful check does not
+ * re-fetch everything from scratch.
+ */
+async function verifyAndRepairOfflineCache() {
+
+    if (!("caches" in window)) {
+
+        return {
+            ready: false,
+            missing: [],
+            unsupported: true
+        };
+    }
+
+
+    const cache =
+        await caches.open(OFFLINE_CACHE_NAME);
+
+    const requiredAssets =
+        getRequiredOfflineAssets();
+
+    const missing = [];
+
+
+    for (const url of requiredAssets) {
+
+        const match = await cache.match(url);
+
+        if (!match) {
+            missing.push(url);
+        }
+    }
+
+
+    if (missing.length === 0) {
+
+        return { ready: true, missing: [] };
+    }
+
+
+    const stillMissing = [];
+
+
+    for (const url of missing) {
+
+        try {
+
+            const response =
+                await fetch(url, { cache: "reload" });
+
+            if (response.ok) {
+
+                await cache.put(url, response);
+
+            } else {
+
+                stillMissing.push(url);
+            }
+
+        } catch (error) {
+
+            stillMissing.push(url);
+        }
+    }
+
+
+    return {
+        ready: stillMissing.length === 0,
+        missing: stillMissing
+    };
+}
+
+
+const offlineStatusEl =
+    document.getElementById("offline-status");
+
+
+async function updateOfflineStatus() {
+
+    offlineStatusEl.className = "checking";
+
+    offlineStatusEl.textContent =
+        "Checking offline readiness...";
+
+
+    const result =
+        await verifyAndRepairOfflineCache();
+
+
+    if (result.unsupported) {
+
+        offlineStatusEl.className = "bad";
+
+        offlineStatusEl.textContent =
+            "Offline mode isn't supported in this browser.";
+
+        return;
+    }
+
+
+    if (result.ready) {
+
+        offlineStatusEl.className = "good";
+
+        offlineStatusEl.textContent =
+            navigator.onLine === false
+                ? "Offline mode - ready \u2713"
+                : "Offline ready \u2713 (tap to re-check)";
+
+    } else {
+
+        offlineStatusEl.className = "bad";
+
+        offlineStatusEl.textContent =
+            `Offline cache incomplete - ${result.missing.length} ` +
+            `file${result.missing.length === 1 ? "" : "s"} missing ` +
+            `(tap to retry)`;
+    }
+}
+
+
+offlineStatusEl.addEventListener(
+    "click",
+    () => updateOfflineStatus()
+);
+
+
+window.addEventListener(
+    "online",
+    () => updateOfflineStatus()
+);
+
+
+updateOfflineStatus();
 
 
 /* ========================================================
